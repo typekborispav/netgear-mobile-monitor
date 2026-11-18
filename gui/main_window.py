@@ -8,7 +8,7 @@ from PySide6.QtCore import QSize
 from qfluentwidgets import FluentIcon as FIF, FluentWindow, NavigationItemPosition
 
 from gui.icons import app_icon
-from gui.pages import AboutPage, OverviewPage, SettingsPage, SpeedPage
+from gui.pages import AboutPage, DetailsPage, OverviewPage, SettingsPage, SpeedPage
 from i18n import t
 from version import APP_NAME
 
@@ -22,11 +22,13 @@ class MainWindow(FluentWindow):
         self.setMinimumSize(QSize(760, 560))
 
         self.overview = OverviewPage(self)
+        self.details = DetailsPage(self)
         self.speed = SpeedPage(self)
         self.settings = SettingsPage(self)
         self.about = AboutPage(self)
 
         self.addSubInterface(self.overview, FIF.HOME, t("nav_overview"))
+        self.addSubInterface(self.details, FIF.DOCUMENT, t("nav_details"))
         self.addSubInterface(self.speed, FIF.SPEED_HIGH, t("nav_speed"))
         self.addSubInterface(self.about, FIF.INFO, t("nav_about"),
                              NavigationItemPosition.BOTTOM)
@@ -39,7 +41,7 @@ class MainWindow(FluentWindow):
                   scr.center().y() - self.height() // 2)
 
     def show_page(self, name):
-        page = {"overview": self.overview, "speed": self.speed,
+        page = {"overview": self.overview, "details": self.details, "speed": self.speed,
                 "settings": self.settings, "about": self.about}.get(name)
         if page is not None:
             self.switchTo(page)

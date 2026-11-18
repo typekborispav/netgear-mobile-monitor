@@ -130,16 +130,6 @@ class OverviewPage(_Page):
         cl.addWidget(cap)
         self.lay.addWidget(chart_card)
 
-        # detaily
-        self.section(t("sec_details"))
-        det, dl = _card(self.view)
-        self.rows = {}
-        for key in ("device", "net", "operator", "mode", "nr", "nr_signal", "ca", "cell",
-                    "bts", "batt", "temp", "uptime"):
-            row = InfoRow(t(f"row_{key}"), det)
-            dl.addWidget(row)
-            self.rows[key] = row
-        self.lay.addWidget(det)
         self.lay.addStretch(1)
 
     def update_state(self, snap, history):
@@ -206,8 +196,55 @@ class OverviewPage(_Page):
             self.data_bar.hide()
             self.other_bar.hide()
 
+        ts = snap.get("ts")
+        self.updated.setText(t("updated_at", ts.strftime("%H:%M:%S")) if ts else "")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+class DetailsPage(_Page):
+    """Technické podrobnosti ve třech kartách: zařízení, mobilní síť, buňka."""
+
+    GROUPS = (
+        ("sec_device", ("device", "batt", "temp", "uptime")),
+        ("sec_network", ("net", "operator", "mode", "nr", "nr_signal", "ca")),
+        ("sec_cell", ("cell", "bts")),
+    )
+
+    def __init__(self, parent=None):
+        super().__init__("details", t("nav_details"), parent)
+        self.updated = CaptionLabel("", self.view)
+        self.head.addWidget(self.updated, 0, Qt.AlignVCenter)
+        self.rows = {}
+        for title, keys in self.GROUPS:
+            self.section(t(title))
+            card, cl = _card(self.view)
+            for key in keys:
+                row = InfoRow(t(f"row_{key}"), card)
+                cl.addWidget(row)
+                self.rows[key] = row
+            self.lay.addWidget(card)
+        self.lay.addStretch(1)
+
+    def update_state(self, snap):
+        sig, data = snap.get("sig"), snap.get("data")
         r = self.rows
         r["device"].set(device.describe(snap.get("device")) or "—")
+        if not snap.get("ok") or sig is None:
+            for key, row in r.items():
+                if key != "device":
+                    row.set("—")
+            self.updated.setText("")
+            return
+
+        roaming = sig.get("roaming") is True
+        gen = (data or {}).get("general", {}) or {}
+        w = (data or {}).get("wwan", {}) or {}
+        pct, src = c.battery(data)
+        r["batt"].set(f"{c.fmt(pct, '%')} {src}".strip(), c.battery_level(pct))
+        r["temp"].set(f"{c.fmt(gen.get('devTemperature'), '°C')} · "
+                      f"{t('thermal_state')} {w.get('thermalState', '—')}")
+        r["uptime"].set(c.uptime(data))
+
         r["net"].set(f"{sig.get('sit')} ({sig.get('typ_sluzby')}) · "
                      f"{t('roaming') if roaming else t('home_net')}",
                      c.BAD if roaming else c.GOOD)
@@ -219,6 +256,7 @@ class OverviewPage(_Page):
                            f"RSRQ {c.fmt(sig.get('nr5g_rsrq'), 'dB')} · "
                            f"SINR {c.fmt(sig.get('nr5g_sinr'), 'dB')}")
         r["ca"].set(c.ca_text(data))
+
         r["cell"].set(f"cell {sig.get('cell_id')} · LAC {sig.get('lac')} · "
                       f"{sig.get('band')} · {t('radio_quality')} {sig.get('radio_quality')}")
         kind, loc = snap.get("bts") or ("none", "")
@@ -228,13 +266,8 @@ class OverviewPage(_Page):
             r["bts"].set(t("bts_area", loc), c.WARN)
         else:
             r["bts"].set(t("bts_unknown"))
-        r["batt"].set(f"{c.fmt(pct, '%')} {src}".strip())
-        r["temp"].set(f"{c.fmt(gen.get('devTemperature'), '°C')} · "
-                      f"{t('thermal_state')} {w.get('thermalState', '—')}")
-        r["uptime"].set(c.uptime(data))
         ts = snap.get("ts")
         self.updated.setText(t("updated_at", ts.strftime("%H:%M:%S")) if ts else "")
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 class SpeedPage(_Page):

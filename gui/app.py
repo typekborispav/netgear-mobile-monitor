@@ -294,6 +294,7 @@ class Controller:
         if self.win is None:
             return
         self.win.overview.update_state(snap, self.poller.history)
+        self.win.details.update_state(snap)
         self.win.settings.set_device(snap.get("device"))
         roaming = (snap.get("sig") or {}).get("roaming") is True
         if not self.speed.running:

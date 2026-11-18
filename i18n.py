@@ -37,6 +37,10 @@ STRINGS = {
     "cs": {
         # navigace / menu
         "nav_overview": "Přehled",
+        "nav_details": "Podrobnosti",
+        "sec_device": "Zařízení",
+        "sec_network": "Mobilní síť",
+        "sec_cell": "Buňka a vysílač",
         "nav_speed": "Rychlost",
         "nav_settings": "Nastavení",
         "nav_about": "O aplikaci",
@@ -259,6 +263,10 @@ STRINGS = {
     },
     "en": {
         "nav_overview": "Overview",
+        "nav_details": "Details",
+        "sec_device": "Device",
+        "sec_network": "Mobile network",
+        "sec_cell": "Cell and tower",
         "nav_speed": "Speed",
         "nav_settings": "Settings",
         "nav_about": "About",
