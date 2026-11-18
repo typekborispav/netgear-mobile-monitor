@@ -16,9 +16,11 @@ from PySide6.QtCore import QObject, Signal
 import bts
 import config
 import device
+import metered
 import netgear as n
 import speedtest as st
 import updater
+import usage
 
 HISTORY_LEN = 120                           # vzorků RSRP/SINR pro graf
 
@@ -27,9 +29,12 @@ class Poller(QObject):
     """Pravidelně čte model.json z routeru a vysílá snímek stavu."""
 
     updated = Signal(object)                # dict snímku (viz _snapshot)
+    roamingChanged = Signal(bool, object)   # roaming, {via_router, ssid, metered}
+    usageAlert = Signal(int, object)        # překročená úroveň %, stav spotřeby
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._roaming = None                # poslední známý stav roamingu
         self._stop = threading.Event()
         self._wake = threading.Event()
         self._reconfigure = False
@@ -73,6 +78,7 @@ class Poller(QObject):
 
     def _poll_once(self):
         snap = dict(self.snapshot, starting=False)
+        fresh_usage = None
         try:
             data = n.get_model()
             sig = n.collect_signal(data) if data else None
@@ -90,14 +96,50 @@ class Poller(QObject):
                             bts=bts.lookup(sig["cell_id"], sig["lac"], mcc, mnc))
                 self.history.append((time.time(), _f(sig.get("rsrp")),
                                      _f(sig.get("sinr"))))
+                try:
+                    fresh_usage = usage.update(data)
+                except Exception:           # noqa: BLE001 – kniha nesmí shodit poll
+                    fresh_usage = None
+                if fresh_usage:
+                    snap["usage"] = fresh_usage
+                self._check_roaming(sig.get("roaming") is True)
             else:
                 snap.update(ok=False, err="no_router")
         except Exception as e:              # noqa: BLE001 – vlákno nesmí spadnout
             snap.update(ok=False, err=str(e))
-        if not config.get("password"):
-            snap["need_password"] = True
+        snap["need_password"] = not config.get("password")
         self.snapshot = snap
         self.updated.emit(snap)
+        alerts = (fresh_usage or {}).get("new_alerts") or []   # jen z tohoto čtení
+        if alerts:
+            self.usageAlert.emit(max(alerts), fresh_usage)
+
+    def _check_roaming(self, roaming):
+        """Při změně roamingu (i při startu rovnou v roamingu) zjistí, jestli jde
+        internet tohoto PC přes router a jestli je jeho Wi-Fi měřená; v režimu
+        „auto" měřené připojení rovnou přepne (a po návratu domů vrátí)."""
+        prev, self._roaming = self._roaming, roaming
+        owned = config.get("metered_owned") or ""
+        if prev == roaming or (prev is None and not roaming and not owned):
+            return
+        via = config.get("router_ip") in device.default_gateways()
+        ssid = metered.current_ssid() if via else None
+        info = {"via_router": via, "ssid": ssid, "metered": metered.is_metered(ssid),
+                "action": None}
+        if config.get("metered_mode") == "auto":
+            if roaming and via and info["metered"] is False:
+                ok = metered.set_metered(ssid, True)
+                info["action"] = "set" if ok else "failed"
+                if ok:
+                    info["metered"] = True
+                    config.save({"metered_owned": ssid})
+            elif not roaming and owned:
+                # Vrátit jen síť, kterou jsme přepnuli my (i když teď není připojená).
+                ok = metered.set_metered(owned, False)
+                info.update(action="reverted" if ok else "failed", ssid=owned)
+                if ok:
+                    config.save({"metered_owned": ""})
+        self.roamingChanged.emit(roaming, info)
 
     @staticmethod
     def _remember_device(info):
@@ -174,12 +216,13 @@ class SpeedTester(QObject):
     def _run(self):
         try:
             res = st.measure()
-            self.last = res
-            self.finished.emit(res)
         except Exception as e:              # noqa: BLE001
-            self.failed.emit(f"{type(e).__name__}: {e}")
-        finally:
             self.running = False
+            self.failed.emit(f"{type(e).__name__}: {e}")
+            return
+        self.last = res
+        self.running = False                # před emitem – GUI už vidí konec
+        self.finished.emit(res)
 
     @staticmethod
     def history(limit=50):

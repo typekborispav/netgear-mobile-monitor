@@ -142,6 +142,42 @@ def nr_state(data):
     return t("nr_no", nsa), NONE
 
 
+def gb(n_bytes):
+    """Bajty → '8,65 GB' (v češtině s desetinnou čárkou)."""
+    import i18n
+    import usage
+    s = usage.fmt_gb(n_bytes)
+    return s.replace(".", ",") if i18n.lang() == "cs" else s
+
+
+def _short_date(d):
+    import i18n
+    return f"{d.day}. {d.month}." if i18n.lang() == "cs" else d.strftime("%b %d")
+
+
+def usage_view(u):
+    """Stav spotřeby → (hodnota, detail, procenta limitu|None, úroveň) pro UI."""
+    if not u:
+        return None
+    lim, pct = u.get("limit_gb") or 0, u.get("roam_pct")
+    value = f"{gb(u['roam'])} / {lim} GB" if lim else gb(u["roam"])
+    detail = t("usage_detail", gb(u["total"]), _short_date(u["end"]))
+    if u["since"] > u["start"]:
+        detail += " · " + t("usage_since", _short_date(u["since"]))
+    level = NONE if pct is None else BAD if pct >= 100 else WARN if pct >= 80 else GOOD
+    return value, detail, pct, level
+
+
+def apply_usage_bar(bar, pct):
+    """ProgressBar limitu: žlutá od 80 %, červená od 100 %."""
+    bar.setVisible(pct is not None)
+    if pct is None:
+        return
+    bar.setValue(int(min(100, pct)))
+    bar.setError(pct >= 100)
+    bar.setPaused(80 <= pct < 100)
+
+
 def device_name(snap=None):
     """Název routeru: z posledního snímku, jinak naposledy uložený, jinak „Netgear"."""
     import config

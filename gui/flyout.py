@@ -163,6 +163,11 @@ class Flyout(QWidget):
         grid.addWidget(self.temp, 0, 1)
         grid.addWidget(self.clients, 1, 0)
         grid.addWidget(self.speed, 1, 1)
+        self.data_bar = ProgressBar(body)
+        self.data_bar.setRange(0, 100)
+        self.data = StatTile(FIF.GLOBE, t("row_roam_data"), body, extra=self.data_bar,
+                             glass=True)
+        grid.addWidget(self.data, 2, 0, 1, 2)
         lay.addLayout(grid)
 
         # BTS
@@ -244,6 +249,12 @@ class Flyout(QWidget):
         self.clients.set(c.fmt(wifi.get("clientCount")),
                          f"{t('uptime')} {c.uptime(data)}")
         self._set_speed(speed_last, speed_running)
+        view = c.usage_view(snap.get("usage"))
+        self.data.setVisible(view is not None)
+        if view:
+            value, detail, pct, level = view
+            self.data.set(value, detail, level if level != c.GOOD else None)
+            c.apply_usage_bar(self.data_bar, pct)
 
         kind, loc = snap.get("bts") or ("none", "")
         self.bts.setText(loc if kind == "exact" else

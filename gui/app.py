@@ -114,8 +114,10 @@ class Controller:
         self.speed = SpeedTester()
         self.upd = UpdateWorker()
         self.poller.updated.connect(self._on_state)
+        self.poller.roamingChanged.connect(self._on_roaming)
+        self.poller.usageAlert.connect(self._on_usage_alert)
         self.speed.started.connect(self._on_speed_changed)
-        self.speed.finished.connect(lambda r: self._on_speed_changed())
+        self.speed.finished.connect(self._on_speed_finished)
         self.speed.failed.connect(self._on_speed_failed)
         self.upd.checked.connect(self._on_update_checked)
         self.upd.check_failed.connect(self._on_update_failed)
@@ -128,7 +130,8 @@ class Controller:
         self.tray = QSystemTrayIcon(tray_icon(self.poller.snapshot), app)
         self.tray.setToolTip(APP_NAME)
         self.tray.activated.connect(self._on_tray_activated)
-        self.tray.messageClicked.connect(lambda: self.show_window("settings"))
+        self._toast_action = None
+        self.tray.messageClicked.connect(self._on_toast_clicked)
         self._build_menu()
         self.tray.show()
 
@@ -210,6 +213,7 @@ class Controller:
         s.checkUpdates.connect(lambda: self.check_updates(True))
         s.openWizard.connect(self.open_wizard)
         s.notify.connect(self._info_bar)
+        s.dataSettingsChanged.connect(self.poller.poll_now)
         w.about.checkUpdates.connect(lambda: self.check_updates(True))
         w.speed.startRequested.connect(self.start_speedtest)
         self.win = w
@@ -301,8 +305,7 @@ class Controller:
 
     def start_speedtest(self):
         if self._roaming():
-            self.tray.showMessage(APP_NAME, t("speed_roaming"),
-                                  QSystemTrayIcon.Warning, 5000)
+            self.toast(APP_NAME, t("speed_roaming"), icon=QSystemTrayIcon.Warning, ms=5000)
             return
         if not self.speed.start():
             return
@@ -316,17 +319,18 @@ class Controller:
             if not running:
                 self.win.speed.show_result(self.speed.last, SpeedTester.history())
                 self._refresh_window(self.poller.snapshot)
-        if not running and self.speed.last and not (self.win and self.win.isVisible()):
-            r = self.speed.last
-            self.tray.showMessage(t("speed_done"),
-                                  f"↓ {r.get('download_mbps')}  ↑ {r.get('upload_mbps')} Mbit/s"
-                                  f" · {r.get('latence_ms')} ms",
-                                  QSystemTrayIcon.Information, 6000)
+
+    def _on_speed_finished(self, r):
+        self._on_speed_changed()
+        if not (self.win and self.win.isVisible()):   # okno výsledek ukazuje samo
+            self.toast(t("speed_done"),
+                       f"↓ {r.get('download_mbps')}  ↑ {r.get('upload_mbps')} Mbit/s"
+                       f" · {r.get('latence_ms')} ms",
+                       on_click=lambda: self.show_window("speed"), ms=6000)
 
     def _on_speed_failed(self, msg):
         self._on_speed_changed()
-        self.tray.showMessage(APP_NAME, t("speed_failed", msg),
-                              QSystemTrayIcon.Warning, 6000)
+        self.toast(APP_NAME, t("speed_failed", msg), icon=QSystemTrayIcon.Warning, ms=6000)
 
     # ── aktualizace ──
     def _auto_check(self):
@@ -351,14 +355,53 @@ class Controller:
             self._show_update_dialog(info)
         elif self._notified_version != info["version"]:
             self._notified_version = info["version"]
-            self._pending_update = info
-            try:
-                self.tray.messageClicked.disconnect()
-            except (RuntimeError, TypeError):
-                pass
-            self.tray.messageClicked.connect(lambda: self._show_update_dialog(info))
-            self.tray.showMessage(t("upd_title", info["version"]), t("upd_toast"),
-                                  QSystemTrayIcon.Information, 10000)
+            self.toast(t("upd_title", info["version"]), t("upd_toast"),
+                       on_click=lambda: self._show_update_dialog(info), ms=10000)
+
+    # ── upozornění v liště ──
+    def toast(self, title, text, on_click=None, icon=QSystemTrayIcon.Information, ms=8000):
+        """Upozornění Windows z ikony v liště; klik spustí `on_click`
+        (výchozí = otevřít aplikaci). Platí vždy jen pro poslední upozornění."""
+        self._toast_action = on_click or (lambda: self.show_window("overview"))
+        self.tray.showMessage(title, text, icon, ms)
+
+    def _on_toast_clicked(self):
+        action, self._toast_action = self._toast_action, None
+        if action:
+            action()
+
+    def _on_roaming(self, roaming, info):
+        """Roaming začal/skončil: oznámit automatické přepnutí měřeného
+        připojení, nebo (režim „hint" / selhání) nabídnout ruční přepnutí."""
+        import metered
+        mode, action = config.get("metered_mode"), info.get("action")
+        ssid = info.get("ssid") or "Wi-Fi"
+        if action == "set":
+            self.toast(t("met_set_title"), t("met_set_text", ssid),
+                       on_click=metered.open_settings, ms=8000)
+            return
+        if action == "reverted":
+            self.toast(t("met_home_title"), t("met_reverted_text", ssid),
+                       on_click=metered.open_settings, ms=8000)
+            return
+        if mode == "off" or not info.get("via_router"):
+            return
+        if mode == "auto" and action is None:
+            return                          # nebylo co přepínat (už měřené apod.)
+        if roaming and info.get("metered") is False:
+            self.toast(t("met_roam_title"), t("met_roam_text", info.get("ssid") or "Wi-Fi"),
+                       on_click=metered.open_settings, icon=QSystemTrayIcon.Warning, ms=15000)
+        elif not roaming and info.get("metered") is True:
+            self.toast(t("met_home_title"), t("met_home_text", info.get("ssid") or "Wi-Fi"),
+                       on_click=metered.open_settings, ms=10000)
+
+    def _on_usage_alert(self, level, u):
+        view = c.usage_view(u)
+        if not view:
+            return
+        self.toast(t("usage_alert_title", level), t("usage_alert_text", view[0]),
+                   icon=QSystemTrayIcon.Critical if level >= 100 else QSystemTrayIcon.Warning,
+                   ms=15000)
 
     def _on_update_failed(self, err, manual):
         if self.win is not None:

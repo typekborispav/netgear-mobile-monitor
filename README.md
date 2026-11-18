@@ -13,8 +13,15 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
   (výchozí brána a obvyklé adresy) a pozná model, například „Nighthawk M3 · MH3150“.
 - **Signál a síť:** RSRP, SINR, RSRQ, 4G/5G (NSA), agregace nosných, buňka a pásmo,
   roaming. K tomu graf historie signálu.
-- **Poloha vysílače (BTS)** v sítích T-Mobile, O2 a Vodafone CZ podle databáze
-  [gsmweb.cz](https://gsmweb.cz/).
+- **Poloha vysílače (BTS)** v sítích T-Mobile, O2 a Vodafone CZ. Data o poloze
+  pocházejí z veřejné databáze [gsmweb.cz](https://gsmweb.cz/).
+- **Spotřeba dat za zúčtovací období**, celkem i v roamingu. Počítá router, takže
+  čísla zahrnují všechna připojená zařízení, ne jen tento počítač. Limit pro roaming
+  a den zúčtování si nastavíte, upozornění přijde při 80 a 100 %.
+- **Měřené připojení v roamingu:** při vstupu do roamingu aplikace automaticky
+  přepne Wi-Fi routeru na „Měřené připojení“, takže Windows zbytečně nestahují
+  aktualizace. Po návratu domů nastavení vrátí, ale jen pokud ho přepnula ona.
+  V Nastavení jde zvolit i režim „Jen upozornit“ nebo funkci vypnout.
 - **Baterie, teplota, počet klientů Wi-Fi, doba běhu.**
 - **Test rychlosti** na vyžádání (Cloudflare, ~75 MB dat). V roamingu je
   automaticky vypnutý.
@@ -87,6 +94,7 @@ and updates itself from GitHub Releases. Download the installer from
 
 [GNU GPL v3](LICENSE). Uživatelské rozhraní používá
 [PySide6-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets) (GPLv3).
-Neoficiální projekt bez vazby na společnost NETGEAR. Databáze vysílačů pochází
-z [gsmweb.cz](https://gsmweb.cz/), aplikace ji stahuje přímo odtud (max. 1× týdně)
-a v repozitáři ji nešíří.
+Neoficiální projekt bez vazby na společnost NETGEAR. Data o poloze vysílačů
+pocházejí z veřejné databáze [gsmweb.cz](https://gsmweb.cz/), kterou projekt
+neprovozuje. Aplikace ji stahuje přímo odtud (max. 1× týdně, jen pro síť, ve které
+je router) a v repozitáři ji nešíří.

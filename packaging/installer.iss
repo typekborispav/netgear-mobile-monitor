@@ -84,7 +84,9 @@ Type: filesandordirs; Name: "{app}\_internal"
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
+; AppUserModelID = stejné jako SetCurrentProcessExplicitAppUserModelID v gui/app.py –
+; upozornění Windows pak nesou název a ikonu aplikace.
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; AppUserModelID: "NetgearMonitor.Monitor"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]

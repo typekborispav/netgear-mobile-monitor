@@ -1,7 +1,7 @@
 """Stránky hlavního okna: Přehled, Rychlost, Nastavení, O aplikaci."""
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtGui import QColor, QIcon, QIntValidator
 from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QTableWidgetItem,
                                QVBoxLayout, QWidget)
 from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox,
@@ -106,6 +106,13 @@ class OverviewPage(_Page):
         for i, tile in enumerate((self.t_rsrp, self.t_sinr, self.t_rsrq,
                                   self.t_batt, self.t_temp, self.t_clients)):
             grid.addWidget(tile, i // 3, i % 3)
+        # spotřeba dat (počítadla routeru = všechna zařízení)
+        self.t_total = StatTile(FIF.DOWNLOAD, t("row_period_data"), self.view)
+        self.data_bar = ProgressBar(self.view)
+        self.data_bar.setRange(0, 100)
+        self.t_roam = StatTile(FIF.GLOBE, t("row_roam_data"), self.view, extra=self.data_bar)
+        grid.addWidget(self.t_total, 2, 0)
+        grid.addWidget(self.t_roam, 2, 1, 1, 2)
         self.lay.addLayout(grid)
 
         # graf
@@ -144,8 +151,9 @@ class OverviewPage(_Page):
                               else t("hint_offline"))
             self.bars.set_bars(0)
             for tile in (self.t_rsrp, self.t_sinr, self.t_rsrq, self.t_batt,
-                         self.t_temp, self.t_clients):
+                         self.t_temp, self.t_clients, self.t_total, self.t_roam):
                 tile.set("—")
+            self.data_bar.hide()
             self.updated.setText("")
             return
 
@@ -173,6 +181,17 @@ class OverviewPage(_Page):
                         f"{t('thermal_state')} {w.get('thermalState', '—')}")
         wifi = (data or {}).get("wifi", {}) or {}
         self.t_clients.set(c.fmt(wifi.get("clientCount")), "WiFi")
+        u = snap.get("usage")
+        view = c.usage_view(u)
+        if view:
+            value, detail, pct, level = view
+            self.t_total.set(c.gb(u["total"]), t("usage_all_devices"))
+            self.t_roam.set(value, detail, level if level != c.GOOD else None)
+            c.apply_usage_bar(self.data_bar, pct)
+        else:
+            self.t_total.set("—", t("usage_need_login"))
+            self.t_roam.set("—")
+            self.data_bar.hide()
 
         r = self.rows
         r["device"].set(device.describe(snap.get("device")) or "—")
@@ -329,6 +348,7 @@ class SettingsPage(_Page):
     themeChanged = Signal(str)
     checkUpdates = Signal()
     openWizard = Signal()
+    dataSettingsChanged = Signal()          # limit / den zúčtování → přepočítat
     notify = Signal(str, str, str)          # úroveň, titulek, text
 
     THEMES = ("auto", "light", "dark")
@@ -369,6 +389,39 @@ class SettingsPage(_Page):
         test_btn.clicked.connect(self._do_test)
         save_btn.clicked.connect(self._do_save)
         self.lay.addWidget(g)
+
+        # ── Mobilní data ──
+        gd = SettingCardGroup(t("grp_data"), self.view)
+        self.limit = LineEdit(self.view)
+        self.limit.setValidator(QIntValidator(0, 100000, self.limit))
+        self.limit.setText(str(cfg.get("roam_limit_gb", 60)))
+        self.limit.setFixedWidth(90)
+        self.limit.editingFinished.connect(self._save_limit)
+        gd.addSettingCard(_WidgetCard(FIF.GLOBE, t("set_roam_limit"), t("set_roam_limit_desc"),
+                                      [self.limit, BodyLabel("GB", self.view)], gd))
+        self.bday = ComboBox(self.view)
+        self.bday.addItem(t("billing_router"), userData=0)
+        for d in range(1, 32):
+            self.bday.addItem(f"{d}.", userData=d)
+        try:
+            self.bday.setCurrentIndex(max(0, min(31, int(cfg.get("billing_day") or 0))))
+        except (TypeError, ValueError):
+            self.bday.setCurrentIndex(0)
+        self.bday.setMaxVisibleItems(10)
+        self.bday.currentIndexChanged.connect(self._save_billing_day)
+        gd.addSettingCard(_WidgetCard(FIF.CALENDAR, t("set_billing_day"),
+                                      t("set_billing_day_desc"), [self.bday], gd))
+        modes = ("auto", "hint", "off")
+        self.met = ComboBox(self.view)
+        for m in modes:
+            self.met.addItem(t(f"metered_{m}"), userData=m)
+        cur = cfg.get("metered_mode")
+        self.met.setCurrentIndex(modes.index(cur) if cur in modes else 0)
+        self.met.currentIndexChanged.connect(
+            lambda i: config.save({"metered_mode": modes[i]}))
+        gd.addSettingCard(_WidgetCard(FIF.SPEED_OFF, t("set_metered"), t("set_metered_desc"),
+                                      [self.met], gd))
+        self.lay.addWidget(gd)
 
         # ── Aplikace ──
         g2 = SettingCardGroup(t("grp_app"), self.view)
@@ -435,6 +488,19 @@ class SettingsPage(_Page):
         g3.addSettingCard(self.upd_card)
         self.lay.addWidget(g3)
         self.lay.addStretch(1)
+
+    def _save_limit(self):
+        try:
+            v = max(0, int(self.limit.text() or 0))
+        except ValueError:
+            return
+        if v != config.get("roam_limit_gb"):
+            config.save({"roam_limit_gb": v})
+            self.dataSettingsChanged.emit()
+
+    def _save_billing_day(self, i):
+        config.save({"billing_day": int(self.bday.itemData(i) or 0)})
+        self.dataSettingsChanged.emit()
 
     def set_device(self, info):
         if info and not self.finder.busy:

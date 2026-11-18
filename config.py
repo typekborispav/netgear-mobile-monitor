@@ -26,6 +26,10 @@ DEFAULTS = {
     "flyout_style": "high",     # průhlednost panelu u hodin: system | high | max
     "check_updates": True,      # při startu a 1× denně zkontrolovat GitHub
     "device_name": "",          # naposledy zjištěný model (zobrazí se hned po startu)
+    "roam_limit_gb": 60,        # měsíční limit dat v roamingu (0 = bez limitu)
+    "billing_day": 0,           # den zúčtování 1–31 (0 = podle routeru)
+    "metered_mode": "auto",     # měřené připojení v roamingu: auto | hint | off
+    "metered_owned": "",        # SSID, které na měřené přepnula aplikace (vrátí ho)
 }
 
 
