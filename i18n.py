@@ -215,7 +215,8 @@ STRINGS = {
         "link_issues_desc": "Chyby a nápady na vylepšení",
         "link_bts": "Databáze vysílačů",
         "link_bts_desc": ("Data o poloze vysílačů (T-Mobile, O2, Vodafone CZ) pocházejí "
-                          "z veřejné databáze gsmweb.cz; stahují se max. 1× týdně"),
+                          "z databáze gsmweb.cz, používáme je se svolením provozovatele. "
+                          "Děkujeme!"),
         "link_license": "Licence",
         "link_license_desc": "Svobodný software pod licencí GNU GPL v3",
         "about_disclaimer": ("Neoficiální aplikace bez vazby na společnost NETGEAR. Čte stav "
@@ -415,7 +416,7 @@ STRINGS = {
         "link_issues_desc": "Bugs and feature ideas",
         "link_bts": "Cell tower database",
         "link_bts_desc": ("Tower location data (T-Mobile, O2, Vodafone CZ) comes from the "
-                          "public gsmweb.cz database; downloaded at most weekly"),
+                          "gsmweb.cz database, used with the operator's permission. Thank you!"),
         "link_license": "License",
         "link_license_desc": "Free software under the GNU GPL v3",
         "about_disclaimer": ("Unofficial app, not affiliated with NETGEAR. It reads the router "
