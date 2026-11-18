@@ -219,6 +219,7 @@ class Controller:
         self.win = w
         self._refresh_window(self.poller.snapshot)
         self._on_speed_changed()
+        w.fit_overview()
         return w
 
     def show_window(self, page=None):

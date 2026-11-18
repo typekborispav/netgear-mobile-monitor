@@ -199,9 +199,27 @@ class MainWindow(FluentWindowBase):
         self.sidebar.setCurrentItem("overview")
         self._updateStackedBackground()
 
+        self._center()
+
+    def _center(self):
         scr = self.screen().availableGeometry()
         self.move(scr.center().x() - self.width() // 2,
                   scr.center().y() - self.height() // 2)
+
+    def fit_overview(self):
+        """Výška okna tak, aby se Přehled (včetně grafu) vešel bez posuvníku.
+
+        Volá se při prvním otevření, až je Přehled naplněný daty; na malé
+        obrazovce se okno nezvětší přes dostupnou plochu.
+        """
+        lay = self.overview.view.layout()
+        lay.activate()
+        need = self.titleBar.height() + lay.totalMinimumSize().height() + 8
+        avail = self.screen().availableGeometry().height() - 40
+        h = min(max(self.height(), need), avail)
+        if h != self.height():
+            self.resize(self.width(), h)
+            self._center()
 
     def _onCurrentInterfaceChanged(self, index):
         w = self.stackedWidget.widget(index)
