@@ -21,15 +21,16 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
 - **Ikona v liště** ukazuje sílu signálu. Odznak „R“ znamená roaming, červený
   křížek výpadek spojení.
 - **Automatické aktualizace z GitHubu.** Aplikace nabídne novou verzi, stáhne ji,
-  ověří kontrolní součet SHA-256 a nainstaluje se sama bez dotazů na oprávnění.
+  ověří kontrolní součet SHA-256 a nainstaluje se. Stačí potvrdit oprávnění správce.
 - Čeština a angličtina, spouštění po přihlášení do Windows.
 
 ## Instalace
 
 1. Stáhněte `NetgearMonitor-Setup-X.Y.Z.exe` z
    [Releases](https://github.com/typekborispav/netgear-mobile-monitor/releases/latest).
-2. Spusťte ho. Instalace nepotřebuje práva správce, aplikace se nainstaluje do
-   `%LOCALAPPDATA%\Programs\NetgearMonitor`.
+2. Spusťte ho a potvrďte oprávnění správce. Aplikace se nainstaluje do
+   `C:\Program Files\Netgear Mobile Monitor`. Běží ale pod vaším běžným účtem
+   bez práv správce.
    - Instalátor zatím není digitálně podepsaný, takže Windows SmartScreen může
      zobrazit „Systém Windows ochránil váš počítač“. Klikněte na **Další
      informace → Přesto spustit**.

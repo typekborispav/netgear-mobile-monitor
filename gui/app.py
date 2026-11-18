@@ -80,8 +80,12 @@ class UpdateDialog(MessageBoxBase):
 
     def _downloaded(self, path):
         self.body.setText(t("upd_installing"))
+        QApplication.processEvents()        # text ukázat dřív, než se objeví UAC
         try:
-            updater.install(path)
+            updater.install(path)           # čeká na potvrzení UAC
+        except updater.Cancelled:
+            self._failed(t("upd_uac_cancelled"))
+            return
         except OSError as e:
             self._failed(str(e))
             return

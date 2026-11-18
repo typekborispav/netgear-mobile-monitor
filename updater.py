@@ -6,9 +6,9 @@ Postup:
 2. `download(info)` stáhne instalátor (`NetgearMonitor-Setup-X.Y.Z.exe`) do %TEMP%
    a **ověří SHA-256** proti souboru `.sha256` z téhož release. Bez kontrolního
    součtu nebo při neshodě se instalátor nespustí.
-3. `install(path)` spustí instalátor potichu (`/SILENT`) a aplikace se hned
-   ukončí. Instalátor je per-user (bez UAC), přepíše soubory v
-   %LOCALAPPDATA%\\Programs\\NetgearMonitor a aplikaci znovu spustí.
+3. `install(path)` spustí instalátor potichu (`/SILENT`) s potvrzením UAC
+   (aplikace je v Program Files) a aplikace se hned ukončí. Instalátor
+   přepíše soubory a aplikaci znovu spustí pod původním uživatelem.
 
 Instalace funguje jen v zabaleném běhu (`sys.frozen`); ze zdrojáků se jen
 nabídne odkaz na stránku release.
@@ -142,19 +142,30 @@ def download(info, progress=None, cancelled=None):
     return path
 
 
-def install(path):
-    """Spustí ověřený instalátor potichu, odpojeně od aplikace.
+class Cancelled(Exception):
+    """Uživatel nepotvrdil oprávnění správce (UAC)."""
 
-    Volající se má hned potom ukončit (instalátor přepisuje exe). Instalátor
-    sám aplikaci po dokončení znovu spustí (viz [Run] v packaging/installer.iss).
+
+def install(path):
+    """Spustí ověřený instalátor potichu, s oprávněním správce (UAC).
+
+    Aplikace je v Program Files, takže instalátor potřebuje práva správce.
+    Spouští se přes ShellExecute „runas": dotaz UAC proběhne HNED tady – když
+    ho uživatel odmítne, vyhodí se `Cancelled` a aplikace běží dál (nic se
+    neukončí naprázdno). Po úspěšném spuštění se má volající ukončit;
+    instalátor aplikaci po dokončení znovu spustí pod původním uživatelem
+    (viz [Run] v packaging/installer.iss).
     """
-    flags = 0
-    if sys.platform == "win32":
-        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-    subprocess.Popen(
-        [path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
-         "/CLOSEAPPLICATIONS"],
-        close_fds=True, creationflags=flags)
+    args = "/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS"
+    if sys.platform != "win32":
+        subprocess.Popen([path] + args.split(), close_fds=True)
+        return
+    try:
+        os.startfile(path, "runas", args)
+    except OSError as e:
+        if getattr(e, "winerror", None) == 1223:        # ERROR_CANCELLED
+            raise Cancelled() from e
+        raise
 
 
 if __name__ == "__main__":

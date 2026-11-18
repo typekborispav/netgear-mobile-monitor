@@ -165,7 +165,9 @@ STRINGS = {
         "upd_open_page": "Otevřít stránku vydání",
         "btn_later": "Později",
         "upd_downloading": "Stahuji aktualizaci…",
-        "upd_installing": "Instaluji – aplikace se za chvíli sama znovu spustí.",
+        "upd_installing": ("Potvrďte instalaci v okně Řízení uživatelských účtů. "
+                           "Aplikace se pak sama znovu spustí."),
+        "upd_uac_cancelled": "Instalace nebyla potvrzena. Aktualizaci můžete spustit znovu.",
         "upd_failed": "Aktualizace selhala: {}",
         "upd_checking": "Hledám aktualizace…",
         "upd_available": "K dispozici je verze {}",
@@ -335,7 +337,9 @@ STRINGS = {
         "upd_open_page": "Open release page",
         "btn_later": "Later",
         "upd_downloading": "Downloading update…",
-        "upd_installing": "Installing – the app will restart by itself in a moment.",
+        "upd_installing": ("Confirm the installation in the User Account Control prompt. "
+                           "The app will then restart by itself."),
+        "upd_uac_cancelled": "The installation was not confirmed. You can start the update again.",
         "upd_failed": "Update failed: {}",
         "upd_checking": "Checking for updates…",
         "upd_available": "Version {} is available",

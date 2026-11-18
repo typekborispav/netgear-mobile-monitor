@@ -2,9 +2,11 @@
 ;
 ; Překládá build.ps1:  ISCC /DAppVersion=X.Y.Z /DSourceDir=... /DOutputDir=... installer.iss
 ;
-; - Instalace pro aktuálního uživatele (bez administrátorských práv / UAC) do
-;   %LOCALAPPDATA%\Programs\NetgearMonitor – díky tomu jde aktualizace z aplikace
-;   provést potichu bez dotazů.
+; - Instalace do C:\Program Files\Netgear Mobile Monitor (vyžaduje práva správce,
+;   instalace i aktualizace zobrazí UAC). Aplikace sama běží BEZ práv správce:
+;   všechny [Run] položky mají `runasoriginaluser`.
+; - Autostart je v HKCU (registr uživatele), proto ho nezapisuje instalátor běžící
+;   jako správce, ale aplikace spuštěná pod původním uživatelem (--set-autostart).
 ; - Tichá aktualizace (/SILENT z aplikace) po dokončení aplikaci sama znovu spustí
 ;   do oznamovací oblasti (--background).
 ; - Odinstalace smaže i autostart; nastavení v %APPDATA%\NetgearMonitor ponechá.
@@ -38,10 +40,12 @@ AppSupportURL={#AppUrl}/issues
 AppUpdatesURL={#AppUrl}/releases
 VersionInfoVersion={#AppVersion}
 VersionInfoProductName={#AppName}
-DefaultDirName={localappdata}\Programs\NetgearMonitor
+DefaultDirName={autopf}\{#AppName}
 DisableProgramGroupPage=yes
 DisableDirPage=auto
-PrivilegesRequired=lowest
+UsePreviousAppDir=no
+PrivilegesRequired=admin
+UsedUserAreasWarning=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
@@ -83,16 +87,15 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
-[Registry]
-; Autostart jen při interaktivní instalaci – tichá aktualizace nesmí přebít
-; volbu, kterou si uživatel mezitím změnil v Nastavení aplikace.
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#RunValue}"; ValueData: """{app}\{#AppExe}"" --background"; Tasks: autostart; Check: not WizardSilent
-
 [Run]
-; Interaktivní instalace: zaškrtávátko „Spustit" na konci průvodce.
-Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Autostart jen při interaktivní instalaci (tichá aktualizace nesmí přebít volbu,
+; kterou si uživatel mezitím změnil v Nastavení). Zapisuje ho aplikace pod
+; původním uživatelem – do jeho HKCU, ne do HKCU účtu správce.
+Filename: "{app}\{#AppExe}"; Parameters: "--set-autostart"; Flags: runasoriginaluser runhidden waituntilterminated; Tasks: autostart; Check: not WizardSilent
+; Interaktivní instalace: zaškrtávátko „Spustit“ na konci průvodce.
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 ; Tichá aktualizace z aplikace: rovnou znovu spustit do lišty.
-Filename: "{app}\{#AppExe}"; Parameters: "--background"; Flags: nowait; Check: WizardSilent
+Filename: "{app}\{#AppExe}"; Parameters: "--background"; Flags: nowait runasoriginaluser; Check: WizardSilent
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /F /IM {#AppExe}"; Flags: runhidden; RunOnceId: "KillApp"
@@ -100,6 +103,9 @@ Filename: "{cmd}"; Parameters: "/C taskkill /F /IM {#AppExe}"; Flags: runhidden;
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
+  { Autostart je v HKCU uživatele. Při odinstalaci pod stejným účtem (běžný
+    případ – uživatel je správce) ho tímto smažeme; jinak ho po spuštění bez
+    aplikace Windows jen tiše přeskočí. }
   if CurUninstallStep = usPostUninstall then
     RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', '{#RunValue}');
 end;
