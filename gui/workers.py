@@ -30,7 +30,7 @@ class Poller(QObject):
 
     updated = Signal(object)                # dict snímku (viz _snapshot)
     roamingChanged = Signal(bool, object)   # roaming, {via_router, ssid, metered}
-    usageAlert = Signal(int, object)        # překročená úroveň %, stav spotřeby
+    usageAlert = Signal(str, int, object)   # druh (home/roam), úroveň %, stav
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -110,9 +110,8 @@ class Poller(QObject):
         snap["need_password"] = not config.get("password")
         self.snapshot = snap
         self.updated.emit(snap)
-        alerts = (fresh_usage or {}).get("new_alerts") or []   # jen z tohoto čtení
-        if alerts:
-            self.usageAlert.emit(max(alerts), fresh_usage)
+        for kind, level in (fresh_usage or {}).get("new_alerts") or []:  # jen z tohoto čtení
+            self.usageAlert.emit(kind, level, fresh_usage)
 
     def _check_roaming(self, roaming):
         """Při změně roamingu (i při startu rovnou v roamingu) zjistí, jestli jde

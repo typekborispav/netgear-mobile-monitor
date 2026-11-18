@@ -23,7 +23,7 @@ from qfluentwidgets import (BodyLabel, CaptionLabel, FluentIcon as FIF,
 
 import config
 from gui import common as c
-from gui.icons import app_icon
+from gui.icons import app_icon, battery_glyph
 from gui.widgets import GlassCard, Pill, SignalBars, StatTile
 from i18n import t
 
@@ -155,7 +155,7 @@ class Flyout(QWidget):
         grid.setSpacing(8)
         self.batt_bar = ProgressBar(body)
         self.batt_bar.setRange(0, 100)
-        self.batt = StatTile(FIF.CALORIES, t("row_batt"), body, extra=self.batt_bar, glass=True)
+        self.batt = StatTile(battery_glyph(), t("row_batt"), body, extra=self.batt_bar, glass=True)
         self.temp = StatTile(FIF.FRIGID, t("row_temp"), body, glass=True)
         self.clients = StatTile(FIF.WIFI, t("row_clients"), body, glass=True)
         self.speed = StatTile(FIF.SPEED_HIGH, t("row_speed"), body, glass=True)
@@ -165,7 +165,7 @@ class Flyout(QWidget):
         grid.addWidget(self.speed, 1, 1)
         self.data_bar = ProgressBar(body)
         self.data_bar.setRange(0, 100)
-        self.data = StatTile(FIF.GLOBE, t("row_roam_data"), body, extra=self.data_bar,
+        self.data = StatTile(FIF.GLOBE, t("row_home_data"), body, extra=self.data_bar,
                              glass=True)
         grid.addWidget(self.data, 2, 0, 1, 2)
         lay.addLayout(grid)
@@ -231,7 +231,7 @@ class Flyout(QWidget):
             self.pill.set_state(f"{c.net_label(sig)} · {t('roaming')}", c.BAD)
         else:
             self.pill.set_state(c.net_label(sig))
-        self.bars.set_bars(c.bars_int(sig))
+        self.bars.set_bars(c.bars_int(sig), c.signal_level(sig))
         self.operator.setText(str(sig.get("operator") or "—"))
         self.net.setText(f"{sig.get('typ_sluzby', '')} · "
                          f"{t('roaming') if roaming else t('home_net')}")
@@ -242,6 +242,7 @@ class Flyout(QWidget):
 
         pct, src = c.battery(data)
         self.batt.set(c.fmt(pct, "%"), src, c.battery_level(pct))
+        self.batt.icon.setIcon(battery_glyph(pct, c.battery_charging(data)))
         self.batt_bar.setValue(pct or 0)
         gen = (data or {}).get("general", {}) or {}
         self.temp.set(c.fmt(gen.get("devTemperature"), "°C"))
@@ -249,10 +250,13 @@ class Flyout(QWidget):
         self.clients.set(c.fmt(wifi.get("clientCount")),
                          f"{t('uptime')} {c.uptime(data)}")
         self._set_speed(speed_last, speed_running)
-        view = c.usage_view(snap.get("usage"))
+        view = c.usage_view(snap.get("usage"), c.active_usage_kind(snap))
         self.data.setVisible(view is not None)
         if view:
-            value, detail, pct, level = view
+            title, value, detail, pct, level = view
+            self.data.title.setText(title)
+            self.data.icon.setIcon(FIF.GLOBE if c.active_usage_kind(snap) == "roam"
+                                   else FIF.HOME)
             self.data.set(value, detail, level if level != c.GOOD else None)
             c.apply_usage_bar(self.data_bar, pct)
 

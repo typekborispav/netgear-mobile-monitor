@@ -395,11 +395,11 @@ class Controller:
             self.toast(t("met_home_title"), t("met_home_text", info.get("ssid") or "Wi-Fi"),
                        on_click=metered.open_settings, ms=10000)
 
-    def _on_usage_alert(self, level, u):
-        view = c.usage_view(u)
+    def _on_usage_alert(self, kind, level, u):
+        view = c.usage_view(u, kind)
         if not view:
             return
-        self.toast(t("usage_alert_title", level), t("usage_alert_text", view[0]),
+        self.toast(t(f"usage_alert_title_{kind}", level), t("usage_alert_text", view[1]),
                    icon=QSystemTrayIcon.Critical if level >= 100 else QSystemTrayIcon.Warning,
                    ms=15000)
 

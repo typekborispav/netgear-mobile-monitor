@@ -17,7 +17,7 @@ import config
 import device
 import i18n
 from gui import common as c
-from gui.icons import app_pixmap
+from gui.icons import app_pixmap, battery_glyph
 from gui.widgets import InfoRow, Pill, SignalBars, SignalChart, StatTile
 from i18n import t
 from version import APP_NAME, GITHUB_URL, __version__
@@ -100,19 +100,24 @@ class OverviewPage(_Page):
         self.t_rsrq = StatTile(FIF.ALIGNMENT, "RSRQ", self.view)
         self.batt_bar = ProgressBar(self.view)
         self.batt_bar.setRange(0, 100)
-        self.t_batt = StatTile(FIF.CALORIES, t("row_batt"), self.view, extra=self.batt_bar)
+        self.t_batt = StatTile(battery_glyph(), t("row_batt"), self.view, extra=self.batt_bar)
         self.t_temp = StatTile(FIF.FRIGID, t("row_temp"), self.view)
         self.t_clients = StatTile(FIF.WIFI, t("row_clients"), self.view)
         for i, tile in enumerate((self.t_rsrp, self.t_sinr, self.t_rsrq,
                                   self.t_batt, self.t_temp, self.t_clients)):
             grid.addWidget(tile, i // 3, i % 3)
         # spotřeba dat (počítadla routeru = všechna zařízení)
-        self.t_total = StatTile(FIF.DOWNLOAD, t("row_period_data"), self.view)
+        # vlevo počítadlo, které právě platí (doma domácí, v roamingu roaming),
+        # vpravo to druhé; každé s vlastním limitem
         self.data_bar = ProgressBar(self.view)
         self.data_bar.setRange(0, 100)
-        self.t_roam = StatTile(FIF.GLOBE, t("row_roam_data"), self.view, extra=self.data_bar)
-        grid.addWidget(self.t_total, 2, 0)
-        grid.addWidget(self.t_roam, 2, 1, 1, 2)
+        self.t_active = StatTile(FIF.GLOBE, t("row_home_data"), self.view, extra=self.data_bar)
+        self.other_bar = ProgressBar(self.view)
+        self.other_bar.setRange(0, 100)
+        self.t_other = StatTile(FIF.DOWNLOAD, t("row_roam_data"), self.view,
+                                extra=self.other_bar)
+        grid.addWidget(self.t_active, 2, 0, 1, 2)
+        grid.addWidget(self.t_other, 2, 2)
         self.lay.addLayout(grid)
 
         # graf
@@ -151,16 +156,17 @@ class OverviewPage(_Page):
                               else t("hint_offline"))
             self.bars.set_bars(0)
             for tile in (self.t_rsrp, self.t_sinr, self.t_rsrq, self.t_batt,
-                         self.t_temp, self.t_clients, self.t_total, self.t_roam):
+                         self.t_temp, self.t_clients, self.t_active, self.t_other):
                 tile.set("—")
             self.data_bar.hide()
+            self.other_bar.hide()
             self.updated.setText("")
             return
 
         roaming = sig.get("roaming") is True
         self.pill.set_state(f"{c.net_label(sig)} · {t('roaming')}" if roaming
                             else c.net_label(sig), c.BAD if roaming else "accent")
-        self.bars.set_bars(c.bars_int(sig))
+        self.bars.set_bars(c.bars_int(sig), c.signal_level(sig))
         self.operator.setText(str(sig.get("operator") or "—"))
         self.net.setText(f"{sig.get('sit', '')} · {sig.get('typ_sluzby', '')} · "
                          f"{t('roaming') if roaming else t('home_net')}")
@@ -174,6 +180,7 @@ class OverviewPage(_Page):
         self.t_rsrq.set(c.fmt(sig.get("rsrq"), "dB"), f"RSSI {c.fmt(sig.get('rssi'), 'dBm')}")
         pct, src = c.battery(data)
         self.t_batt.set(c.fmt(pct, "%"), src, c.battery_level(pct))
+        self.t_batt.icon.setIcon(battery_glyph(pct, c.battery_charging(data)))
         self.batt_bar.setValue(pct or 0)
         gen = (data or {}).get("general", {}) or {}
         w = (data or {}).get("wwan", {}) or {}
@@ -182,16 +189,22 @@ class OverviewPage(_Page):
         wifi = (data or {}).get("wifi", {}) or {}
         self.t_clients.set(c.fmt(wifi.get("clientCount")), "WiFi")
         u = snap.get("usage")
-        view = c.usage_view(u)
-        if view:
-            value, detail, pct, level = view
-            self.t_total.set(c.gb(u["total"]), t("usage_all_devices"))
-            self.t_roam.set(value, detail, level if level != c.GOOD else None)
-            c.apply_usage_bar(self.data_bar, pct)
+        kind = c.active_usage_kind(snap)
+        other = "roam" if kind == "home" else "home"
+        if u:
+            for tile, bar, k in ((self.t_active, self.data_bar, kind),
+                                 (self.t_other, self.other_bar, other)):
+                title, value, detail, pct, level = c.usage_view(u, k)
+                tile.title.setText(title)
+                tile.icon.setIcon(FIF.HOME if k == "home" else FIF.GLOBE)
+                tile.set(value, detail if k == kind else t("usage_all_devices"),
+                         level if level != c.GOOD else None)
+                c.apply_usage_bar(bar, pct)
         else:
-            self.t_total.set("—", t("usage_need_login"))
-            self.t_roam.set("—")
+            self.t_active.set("—", t("usage_need_login"))
+            self.t_other.set("—")
             self.data_bar.hide()
+            self.other_bar.hide()
 
         r = self.rows
         r["device"].set(device.describe(snap.get("device")) or "—")
@@ -396,9 +409,18 @@ class SettingsPage(_Page):
         self.limit.setValidator(QIntValidator(0, 100000, self.limit))
         self.limit.setText(str(cfg.get("roam_limit_gb", 60)))
         self.limit.setFixedWidth(90)
-        self.limit.editingFinished.connect(self._save_limit)
+        self.limit.editingFinished.connect(
+            lambda: self._save_limit(self.limit, "roam_limit_gb"))
         gd.addSettingCard(_WidgetCard(FIF.GLOBE, t("set_roam_limit"), t("set_roam_limit_desc"),
                                       [self.limit, BodyLabel("GB", self.view)], gd))
+        self.home_limit = LineEdit(self.view)
+        self.home_limit.setValidator(QIntValidator(0, 100000, self.home_limit))
+        self.home_limit.setText(str(cfg.get("home_limit_gb", 0)))
+        self.home_limit.setFixedWidth(90)
+        self.home_limit.editingFinished.connect(
+            lambda: self._save_limit(self.home_limit, "home_limit_gb"))
+        gd.addSettingCard(_WidgetCard(FIF.HOME, t("set_home_limit"), t("set_home_limit_desc"),
+                                      [self.home_limit, BodyLabel("GB", self.view)], gd))
         self.bday = ComboBox(self.view)
         self.bday.addItem(t("billing_router"), userData=0)
         for d in range(1, 32):
@@ -489,13 +511,13 @@ class SettingsPage(_Page):
         self.lay.addWidget(g3)
         self.lay.addStretch(1)
 
-    def _save_limit(self):
+    def _save_limit(self, edit, key):
         try:
-            v = max(0, int(self.limit.text() or 0))
+            v = max(0, int(edit.text() or 0))
         except ValueError:
             return
-        if v != config.get("roam_limit_gb"):
-            config.save({"roam_limit_gb": v})
+        if v != config.get(key):
+            config.save({key: v})
             self.dataSettingsChanged.emit()
 
     def _save_billing_day(self, i):

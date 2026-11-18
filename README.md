@@ -16,9 +16,11 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
 - **Poloha vysílače (BTS)** v sítích T-Mobile, O2 a Vodafone CZ. Data o poloze
   pocházejí z databáze [gsmweb.cz](https://gsmweb.cz/), používáme je se svolením
   provozovatele.
-- **Spotřeba dat za zúčtovací období**, celkem i v roamingu. Počítá router, takže
-  čísla zahrnují všechna připojená zařízení, ne jen tento počítač. Limit pro roaming
-  a den zúčtování si nastavíte, upozornění přijde při 80 a 100 %.
+- **Spotřeba dat za zúčtovací období** zvlášť pro domácí síť a roaming, plus
+  celkový součet. Zobrazuje se vždy to počítadlo, které právě platí. Počítá router,
+  takže čísla zahrnují všechna připojená zařízení, ne jen tento počítač. Limity
+  (domácí síť i roaming) a den zúčtování si nastavíte, upozornění přijde při 80
+  a 100 %.
 - **Měřené připojení v roamingu:** při vstupu do roamingu aplikace automaticky
   přepne Wi-Fi routeru na „Měřené připojení“, takže Windows zbytečně nestahují
   aktualizace. Po návratu domů nastavení vrátí, ale jen pokud ho přepnula ona.
@@ -26,8 +28,9 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
 - **Baterie, teplota, počet klientů Wi-Fi, doba běhu.**
 - **Test rychlosti** na vyžádání (Cloudflare, ~75 MB dat). V roamingu je
   automaticky vypnutý.
-- **Ikona v liště** ukazuje sílu signálu. Odznak „R“ znamená roaming, červený
-  křížek výpadek spojení.
+- **Ikona v liště** ukazuje sílu signálu sloupečky obarvenými podle kvality
+  (zelená, žlutá, červená). Odznak „R“ znamená roaming, červený křížek výpadek
+  spojení.
 - **Automatické aktualizace z GitHubu.** Aplikace nabídne novou verzi, stáhne ji,
   ověří kontrolní součet SHA-256 a nainstaluje se. Stačí potvrdit oprávnění správce.
 - Čeština a angličtina, spouštění po přihlášení do Windows.

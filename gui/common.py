@@ -110,6 +110,10 @@ def battery(data):
     return pct, src
 
 
+def battery_charging(data):
+    return bool(((data or {}).get("power") or {}).get("charging"))
+
+
 def battery_level(pct):
     if pct is None:
         return NONE
@@ -155,17 +159,24 @@ def _short_date(d):
     return f"{d.day}. {d.month}." if i18n.lang() == "cs" else d.strftime("%b %d")
 
 
-def usage_view(u):
-    """Stav spotřeby → (hodnota, detail, procenta limitu|None, úroveň) pro UI."""
+def active_usage_kind(snap):
+    """Počítadlo, které právě platí: v roamingu roaming, jinak domácí síť."""
+    return "roam" if ((snap or {}).get("sig") or {}).get("roaming") is True else "home"
+
+
+def usage_view(u, kind):
+    """Počítadlo `kind` (home/roam) → (titulek, hodnota, detail, % limitu, úroveň)."""
     if not u:
         return None
-    lim, pct = u.get("limit_gb") or 0, u.get("roam_pct")
-    value = f"{gb(u['roam'])} / {lim} GB" if lim else gb(u["roam"])
-    detail = t("usage_detail", gb(u["total"]), _short_date(u["end"]))
+    other = "roam" if kind == "home" else "home"
+    lim, pct = u["limits"][kind], u["pct"][kind]
+    value = f"{gb(u[kind])} / {lim} GB" if lim else gb(u[kind])
+    detail = t("usage_detail", t(f"usage_{other}_short"), gb(u[other]),
+               gb(u["total"]), _short_date(u["end"]))
     if u["since"] > u["start"]:
         detail += " · " + t("usage_since", _short_date(u["since"]))
     level = NONE if pct is None else BAD if pct >= 100 else WARN if pct >= 80 else GOOD
-    return value, detail, pct, level
+    return t(f"row_{kind}_data"), value, detail, pct, level
 
 
 def apply_usage_bar(bar, pct):
