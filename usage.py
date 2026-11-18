@@ -11,6 +11,14 @@ po přihlášení), takže zahrnují **všechna připojená zařízení**, ne je
 hlídá v roamingu `dataTransferredRoaming` proti `billingCycleLimitRoaming`,
 jinak `dataTransferred` proti `billingCycleLimit`. Celkem = součet obou.
 
+Tarif (EU, „roaming jako doma"):
+- `home_plan="unlimited"` – doma bez limitu, počítadlo jen informuje;
+- `home_plan="limited"` – limit `home_limit_gb`; s `roam_counts_home=True`
+  (obvyklé) se roaming v EU čerpá ze stejného balíku → domácí limit se
+  porovnává s domácí + roamingovou spotřebou;
+- `roam_limit_gb` – limit spravedlivého užívání (FUP) pro roaming v EU,
+  hlídá se vždy zvlášť jen proti roamingu.
+
 Hodiny routeru nemusí jít správně (M3 ukazuje rok 2016) a uživatel může mít
 u operátora jiný den zúčtování, než má router. Proto si aplikace vede vlastní
 „knihu" (`usage.json` v datové složce):
@@ -36,7 +44,6 @@ import config
 LEDGER = "usage.json"
 LEDGER_VERSION = 2
 KINDS = ("home", "roam")
-LIMIT_KEYS = {"home": "home_limit_gb", "roam": "roam_limit_gb"}
 GB = 1000 ** 3                              # operátoři počítají v dekadických GB
 WARN_LEVELS = (80, 100)                     # % limitu, kdy upozornit
 
@@ -123,7 +130,7 @@ def update(data, today=None):
             "alerted": {k: [] for k in KINDS},
             "alert_limit": {},
         }
-    used, limits, pct, new_alerts = {}, {}, {}, []
+    used = {}
     for k in KINDS:
         last, cur = led["last"][k], cnt[k]
         if cur < last:                       # router počítadlo vynuloval
@@ -132,10 +139,18 @@ def update(data, today=None):
         led["last"][k] = cur
         used[k] = led["acc"][k] + max(0, cur - led["base"][k])
 
-        limits[k] = max(0, _int(config.get(LIMIT_KEYS[k])) or 0)
-        pct[k] = used[k] * 100 / (limits[k] * GB) if limits[k] else None
-        if led["alert_limit"].get(k) != limits[k]:   # změněný limit → přepočítat
-            led["alert_limit"][k] = limits[k]
+    plan = plan_settings()
+    # Co se porovnává s limitem: doma (u omezeného tarifu) i roaming v EU, pokud
+    # se čerpá ze stejného balíku; roaming vždy jen proti FUP limitu.
+    counted = {"home": used["home"] + (used["roam"] if plan["roam_counts_home"] else 0),
+               "roam": used["roam"]}
+    limits = {"home": plan["home_limit"], "roam": plan["roam_limit"]}
+    pct, new_alerts = {}, []
+    for k in KINDS:
+        pct[k] = counted[k] * 100 / (limits[k] * GB) if limits[k] else None
+        alert_key = f"{limits[k]}|{plan['roam_counts_home']}"
+        if led["alert_limit"].get(k) != alert_key:   # změněný tarif → přepočítat
+            led["alert_limit"][k] = alert_key
             led["alerted"][k] = [lv for lv in WARN_LEVELS
                                  if pct[k] is not None and pct[k] >= lv]
         if pct[k] is not None:
@@ -149,9 +164,24 @@ def update(data, today=None):
         pass
     return {
         "home": used["home"], "roam": used["roam"], "total": used["home"] + used["roam"],
+        "counted": counted, "plan": plan["home_plan"],
+        "roam_counts_home": plan["roam_counts_home"],
         "start": start, "end": end, "days_left": (end - today).days,
         "since": date.fromisoformat(led["since"]), "billing_day": eff_day,
         "limits": limits, "pct": pct, "new_alerts": new_alerts,
+    }
+
+
+def plan_settings():
+    """Tarif z nastavení: home_plan, home_limit (GB, 0 = bez), roam_limit
+    (FUP v GB, 0 = bez), roam_counts_home (platí jen u omezeného tarifu)."""
+    limited = config.get("home_plan") == "limited"
+    home_limit = max(0, _int(config.get("home_limit_gb")) or 0) if limited else 0
+    return {
+        "home_plan": "limited" if limited else "unlimited",
+        "home_limit": home_limit,
+        "roam_limit": max(0, _int(config.get("roam_limit_gb")) or 0),
+        "roam_counts_home": bool(limited and home_limit and config.get("roam_counts_home")),
     }
 
 

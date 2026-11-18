@@ -405,22 +405,38 @@ class SettingsPage(_Page):
 
         # ── Mobilní data ──
         gd = SettingCardGroup(t("grp_data"), self.view)
+        # Tarif doma: neomezený (jen informativně) / omezený s limitem balíku.
+        self.plan = ComboBox(self.view)
+        self.plan.addItem(t("plan_unlimited"), userData="unlimited")
+        self.plan.addItem(t("plan_limited"), userData="limited")
+        self.plan.setCurrentIndex(1 if cfg.get("home_plan") == "limited" else 0)
+        self.home_limit = LineEdit(self.view)
+        self.home_limit.setValidator(QIntValidator(0, 100000, self.home_limit))
+        self.home_limit.setText(str(cfg.get("home_limit_gb") or ""))
+        self.home_limit.setPlaceholderText("20")
+        self.home_limit.setFixedWidth(80)
+        self.home_limit.editingFinished.connect(
+            lambda: self._save_limit(self.home_limit, "home_limit_gb"))
+        self.home_gb = BodyLabel("GB", self.view)
+        gd.addSettingCard(_WidgetCard(FIF.HOME, t("set_home_plan"), t("set_home_plan_desc"),
+                                      [self.plan, self.home_limit, self.home_gb], gd))
+        self.counts = SwitchSettingCard(FIF.SYNC, t("set_roam_counts"),
+                                        t("set_roam_counts_desc"), parent=gd)
+        self.counts.setChecked(bool(cfg.get("roam_counts_home", True)))
+        _switch_texts(self.counts)
+        self.counts.checkedChanged.connect(self._save_counts)
+        gd.addSettingCard(self.counts)
+        self.plan.currentIndexChanged.connect(self._save_plan)
+
         self.limit = LineEdit(self.view)
         self.limit.setValidator(QIntValidator(0, 100000, self.limit))
         self.limit.setText(str(cfg.get("roam_limit_gb", 60)))
-        self.limit.setFixedWidth(90)
+        self.limit.setFixedWidth(80)
         self.limit.editingFinished.connect(
             lambda: self._save_limit(self.limit, "roam_limit_gb"))
         gd.addSettingCard(_WidgetCard(FIF.GLOBE, t("set_roam_limit"), t("set_roam_limit_desc"),
                                       [self.limit, BodyLabel("GB", self.view)], gd))
-        self.home_limit = LineEdit(self.view)
-        self.home_limit.setValidator(QIntValidator(0, 100000, self.home_limit))
-        self.home_limit.setText(str(cfg.get("home_limit_gb", 0)))
-        self.home_limit.setFixedWidth(90)
-        self.home_limit.editingFinished.connect(
-            lambda: self._save_limit(self.home_limit, "home_limit_gb"))
-        gd.addSettingCard(_WidgetCard(FIF.HOME, t("set_home_limit"), t("set_home_limit_desc"),
-                                      [self.home_limit, BodyLabel("GB", self.view)], gd))
+        self._plan_visibility()
         self.bday = ComboBox(self.view)
         self.bday.addItem(t("billing_router"), userData=0)
         for d in range(1, 32):
@@ -519,6 +535,22 @@ class SettingsPage(_Page):
         if v != config.get(key):
             config.save({key: v})
             self.dataSettingsChanged.emit()
+
+    def _plan_visibility(self):
+        """Limit a „roaming se čerpá z domácího" dávají smysl jen u omezeného tarifu."""
+        limited = self.plan.currentData() == "limited"
+        self.home_limit.setVisible(limited)
+        self.home_gb.setVisible(limited)
+        self.counts.setVisible(limited)
+
+    def _save_plan(self, i):
+        config.save({"home_plan": self.plan.itemData(i)})
+        self._plan_visibility()
+        self.dataSettingsChanged.emit()
+
+    def _save_counts(self, on):
+        config.save({"roam_counts_home": bool(on)})
+        self.dataSettingsChanged.emit()
 
     def _save_billing_day(self, i):
         config.save({"billing_day": int(self.bday.itemData(i) or 0)})

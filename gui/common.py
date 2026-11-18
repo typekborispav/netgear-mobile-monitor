@@ -170,9 +170,19 @@ def usage_view(u, kind):
         return None
     other = "roam" if kind == "home" else "home"
     lim, pct = u["limits"][kind], u["pct"][kind]
-    value = f"{gb(u[kind])} / {lim} GB" if lim else gb(u[kind])
-    detail = t("usage_detail", t(f"usage_{other}_short"), gb(u[other]),
-               gb(u["total"]), _short_date(u["end"]))
+    end = _short_date(u["end"])
+    if kind == "home" and u.get("plan") != "limited":
+        # Neomezený tarif: číslo jen informativně, bez limitu a upozornění.
+        value = f"{gb(u['home'])} · {t('unlimited')}"
+        detail = t("usage_detail", t("usage_roam_short"), gb(u["roam"]), gb(u["total"]), end)
+    elif kind == "home" and u.get("roam_counts_home"):
+        # Omezený tarif, roaming v EU se čerpá ze stejného balíku.
+        value = f"{gb(u['counted']['home'])} / {lim} GB"
+        detail = t("usage_detail_incl", gb(u["roam"]), end)
+    else:
+        value = f"{gb(u[kind])} / {lim} GB" if lim else gb(u[kind])
+        detail = t("usage_detail", t(f"usage_{other}_short"), gb(u[other]),
+                   gb(u["total"]), end)
     if u["since"] > u["start"]:
         detail += " · " + t("usage_since", _short_date(u["since"]))
     level = NONE if pct is None else BAD if pct >= 100 else WARN if pct >= 80 else GOOD

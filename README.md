@@ -18,9 +18,11 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
   provozovatele.
 - **Spotřeba dat za zúčtovací období** zvlášť pro domácí síť a roaming, plus
   celkový součet. Zobrazuje se vždy to počítadlo, které právě platí. Počítá router,
-  takže čísla zahrnují všechna připojená zařízení, ne jen tento počítač. Limity
-  (domácí síť i roaming) a den zúčtování si nastavíte, upozornění přijde při 80
-  a 100 %.
+  takže čísla zahrnují všechna připojená zařízení, ne jen tento počítač. V Nastavení
+  zvolíte tarif: **neomezená data** (počítadlo jen informuje), nebo **omezená data**
+  s limitem balíku, do kterého se podle pravidla „roaming jako doma“ započítá
+  i roaming v EU. Zvlášť nastavíte limit spravedlivého užívání (FUP) pro roaming
+  v EU a den zúčtování. Upozornění přijde při 80 a 100 %.
 - **Měřené připojení v roamingu:** při vstupu do roamingu aplikace automaticky
   přepne Wi-Fi routeru na „Měřené připojení“, takže Windows zbytečně nestahují
   aktualizace. Po návratu domů nastavení vrátí, ale jen pokud ho přepnula ona.
