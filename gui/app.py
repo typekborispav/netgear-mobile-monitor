@@ -293,6 +293,7 @@ class Controller:
     def _refresh_window(self, snap):
         if self.win is None:
             return
+        self.win.set_status(snap)
         self.win.overview.update_state(snap, self.poller.history)
         self.win.details.update_state(snap)
         self.win.settings.set_device(snap.get("device"))

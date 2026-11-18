@@ -32,7 +32,7 @@ class _Page(ScrollArea):
         self.view = QWidget(self)
         self.view.setObjectName("view")
         self.lay = QVBoxLayout(self.view)
-        self.lay.setContentsMargins(36, 28, 36, 36)
+        self.lay.setContentsMargins(40, 20, 40, 36)
         self.lay.setSpacing(12)
         head = QHBoxLayout()
         self.title = TitleLabel(title, self.view)
