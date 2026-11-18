@@ -1,0 +1,16 @@
+{
+  "name": "netgear-whatsapp-bridge",
+  "version": "1.0.0",
+  "description": "Baileys most: lokalni HTTP endpoint POST /send -> WhatsApp",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "pino": "^9.5.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

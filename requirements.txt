@@ -1,0 +1,6 @@
+# Běh aplikace (Windows GUI i CLI skripty)
+requests>=2.31
+PySide6==6.12.0
+PySide6-Fluent-Widgets==1.11.3
+# volitelné – jen at_sms.py (AT příkazy přes sériový port)
+# pyserial

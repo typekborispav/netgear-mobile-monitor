@@ -1,0 +1,26 @@
+# Build výstupy (PyInstaller, Inno Setup)
+build/
+dist/
+*.spec
+icon.ico
+
+# Data za běhu – logy, stažené BTS databáze (gsmweb.cz se nešíří, stahuje se)
+signal_log.csv
+speed_log.csv
+*.log
+*.clf
+*.clf.tmp
+
+# Lokální nastavení nástrojů / poznámky
+.claude/
+memory/
+
+# WhatsApp most
+whatsapp-bridge/node_modules/
+# WhatsApp přihlašovací relace (citlivé – nikdy nesdílet)
+whatsapp-bridge/auth_info/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
