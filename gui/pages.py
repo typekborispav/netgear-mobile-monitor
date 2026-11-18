@@ -177,7 +177,7 @@ class OverviewPage(_Page):
         self.t_temp.set(c.fmt(gen.get("devTemperature"), "°C"),
                         f"{t('thermal_state')} {w.get('thermalState', '—')}")
         wifi = (data or {}).get("wifi", {}) or {}
-        self.t_clients.set(c.fmt(wifi.get("clientCount")), "WiFi")
+        self.t_clients.set(c.fmt(wifi.get("clientCount")), "Wi-Fi")
         u = snap.get("usage")
         kind = c.active_usage_kind(snap)
         other = "roam" if kind == "home" else "home"
@@ -257,7 +257,7 @@ class DetailsPage(_Page):
                            f"SINR {c.fmt(sig.get('nr5g_sinr'), 'dB')}")
         r["ca"].set(c.ca_text(data))
 
-        r["cell"].set(f"cell {sig.get('cell_id')} · LAC {sig.get('lac')} · "
+        r["cell"].set(f"Cell ID {sig.get('cell_id')} · LAC {sig.get('lac')} · "
                       f"{sig.get('band')} · {t('radio_quality')} {sig.get('radio_quality')}")
         kind, loc = snap.get("bts") or ("none", "")
         if kind == "exact":

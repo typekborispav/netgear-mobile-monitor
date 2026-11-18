@@ -142,7 +142,7 @@ def nr_state(data):
     diag = (w.get("diagInfo") or [{}])[0] or {}
     if diag.get("nr5gAttached"):
         return t("nr_connected"), GOOD
-    nsa = t("on") if diag.get("endcEnabledConfig") else t("off")
+    nsa = (t("on") if diag.get("endcEnabledConfig") else t("off")).lower()
     return t("nr_no", nsa), NONE
 
 
