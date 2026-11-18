@@ -14,9 +14,10 @@ import sys
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import QApplication, QSystemTrayIcon
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QSystemTrayIcon
 from qfluentwidgets import (Action, BodyLabel, FluentIcon as FIF, InfoBar,
-                            InfoBarPosition, MessageBoxBase, ProgressBar,
+                            IconWidget, InfoBarIcon, InfoBarPosition,
+                            MessageBoxBase, ProgressBar,
                             SubtitleLabel, SystemThemeListener, SystemTrayMenu,
                             Theme, isDarkTheme, setTheme, setThemeColor)
 
@@ -30,7 +31,7 @@ from gui.main_window import MainWindow
 from gui.workers import Poller, SpeedTester, UpdateWorker
 from gui.wizard import SetupWizard
 from i18n import t
-from version import APP_ID, APP_NAME, __version__
+from version import APP_ID, APP_NAME, GITHUB_URL, __version__
 
 UPDATE_INTERVAL_MS = 24 * 3600 * 1000
 SERVER_NAME = f"{APP_ID}-{getpass.getuser()}"
@@ -81,12 +82,16 @@ class UpdateDialog(MessageBoxBase):
     def _downloaded(self, path):
         self.body.setText(t("upd_installing"))
         QApplication.processEvents()        # text ukázat dřív, než se objeví UAC
+        # Po restartu aplikace (nebo příštím spuštění) se ohlásí výsledek.
+        config.save({"pending_update": {"from": __version__, "to": self.info["version"]}})
         try:
             updater.install(path)           # čeká na potvrzení UAC
         except updater.Cancelled:
+            config.save({"pending_update": None})
             self._failed(t("upd_uac_cancelled"))
             return
         except OSError as e:
+            config.save({"pending_update": None})
             self._failed(str(e))
             return
         QTimer.singleShot(300, QApplication.instance().quit)
@@ -99,6 +104,34 @@ class UpdateDialog(MessageBoxBase):
     def reject(self):
         self.worker.cancel()
         super().reject()
+
+
+# ── Výsledek aktualizace (po restartu aplikace) ───────────────────────────────
+class UpdateResultDialog(MessageBoxBase):
+    """Úspěch: „Aktualizace proběhla úspěšně“ + Co je nového.
+    Neúspěch (běží pořád stará verze): „Aktualizace se nedokončila“ + Zkusit znovu."""
+
+    def __init__(self, ok, target, parent):
+        super().__init__(parent)
+        self.ok = ok
+        self.widget.setMinimumWidth(420)
+        head = QHBoxLayout()
+        head.setSpacing(12)
+        icon = IconWidget(InfoBarIcon.SUCCESS if ok else InfoBarIcon.ERROR, self.widget)
+        icon.setFixedSize(24, 24)
+        head.addWidget(icon, 0, Qt.AlignVCenter)
+        head.addWidget(SubtitleLabel(t("upd_done_title") if ok else t("upd_fail_title"),
+                                     self.widget), 1, Qt.AlignVCenter)
+        self.viewLayout.addLayout(head)
+        body = BodyLabel(t("upd_done_text", __version__) if ok
+                         else t("upd_fail_text", target, __version__), self.widget)
+        body.setWordWrap(True)
+        self.viewLayout.addWidget(body)
+        self.yesButton.setText(t("btn_close") if ok else t("upd_retry"))
+        self.cancelButton.setText(t("upd_notes") if ok else t("btn_close"))
+        self.notes = False                  # klik na „Co je nového“ (ne Esc)
+        if ok:
+            self.cancelButton.clicked.connect(lambda: setattr(self, "notes", True))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -146,6 +179,9 @@ class Controller:
             self.show_window("overview")
         if first_run:
             QTimer.singleShot(400, self.open_wizard)
+
+        if config.get("pending_update"):
+            QTimer.singleShot(1500, self._report_update)
 
         self.upd_timer = QTimer(app)
         self.upd_timer.timeout.connect(self._auto_check)
@@ -219,7 +255,7 @@ class Controller:
         self.win = w
         self._refresh_window(self.poller.snapshot)
         self._on_speed_changed()
-        w.fit_overview()
+        w.fit_overview(final=self.poller.snapshot.get("ok", False))
         return w
 
     def show_window(self, page=None):
@@ -296,6 +332,8 @@ class Controller:
             return
         self.win.set_status(snap)
         self.win.overview.update_state(snap, self.poller.history)
+        if snap.get("ok"):
+            self.win.fit_overview()             # jen poprvé, po prvních datech
         self.win.details.update_state(snap)
         self.win.settings.set_device(snap.get("device"))
         roaming = (snap.get("sig") or {}).get("roaming") is True
@@ -411,6 +449,24 @@ class Controller:
             self.win.settings.set_update_status(t("upd_check_failed", err))
         if manual:
             self._info_bar("error", t("set_upd_check"), t("upd_check_failed", err))
+
+    def _report_update(self):
+        """Po aktualizaci ohlásí výsledek: instalátor aplikaci znovu spustí
+        (úspěch), jinak se to ukáže při příštím spuštění (stará verze = neúspěch)."""
+        pend = config.get("pending_update") or {}
+        config.save({"pending_update": None})
+        target = str(pend.get("to") or "")
+        if not target:
+            return
+        ok = not updater.is_newer(target)               # běží cílová (nebo novější) verze
+        w = self._ensure_window()
+        w.bring_to_front("overview")
+        dlg = UpdateResultDialog(ok, target, w)
+        accepted = dlg.exec()
+        if dlg.notes:
+            QDesktopServices.openUrl(QUrl(f"{GITHUB_URL}/releases/tag/v{__version__}"))
+        elif not ok and accepted:
+            self.check_updates(True)
 
     def _show_update_dialog(self, info):
         w = self._ensure_window()

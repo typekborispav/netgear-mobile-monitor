@@ -173,6 +173,7 @@ class MainWindow(FluentWindowBase):
         self.resize(1100, 760)
         self.setMinimumSize(QSize(960, 600))
 
+        self._fitted = False
         self.sidebar = Sidebar(self)
         self.navigationInterface = self.sidebar     # FluentWindowBase volá setCurrentItem()
         self.hBoxLayout.setContentsMargins(0, self.titleBar.height(), 0, 0)
@@ -206,20 +207,28 @@ class MainWindow(FluentWindowBase):
         self.move(scr.center().x() - self.width() // 2,
                   scr.center().y() - self.height() // 2)
 
-    def fit_overview(self):
+    def fit_overview(self, final=True):
         """Výška okna tak, aby se Přehled (včetně grafu) vešel bez posuvníku.
 
-        Volá se při prvním otevření, až je Přehled naplněný daty; na malé
-        obrazovce se okno nezvětší přes dostupnou plochu.
+        Volá se při vytvoření okna a znovu po prvních datech z routeru
+        (`final=True`), protože naplněný Přehled je vyšší. Okno se jen
+        zvětšuje a nikdy přes dostupnou plochu obrazovky.
         """
+        if self._fitted:
+            return
+        self._fitted = final
         lay = self.overview.view.layout()
         lay.activate()
         need = self.titleBar.height() + lay.totalMinimumSize().height() + 8
-        avail = self.screen().availableGeometry().height() - 40
-        h = min(max(self.height(), need), avail)
-        if h != self.height():
-            self.resize(self.width(), h)
+        scr = self.screen().availableGeometry()
+        h = min(max(self.height(), need), scr.height() - 40)
+        if h == self.height():
+            return
+        self.resize(self.width(), h)
+        if not self.isVisible():
             self._center()
+        elif self.geometry().bottom() > scr.bottom():   # už otevřené: neskákat, jen se vejít
+            self.move(self.x(), max(scr.top(), scr.bottom() - self.frameGeometry().height()))
 
     def _onCurrentInterfaceChanged(self, index):
         w = self.stackedWidget.widget(index)

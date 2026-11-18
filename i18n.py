@@ -217,6 +217,23 @@ STRINGS = {
         "upd_uptodate": "Používáte nejnovější verzi ({}).",
         "upd_check_failed": "Kontrola aktualizací se nezdařila ({}).",
         "upd_toast": "Klikněte pro instalaci.",
+        "upd_done_title": "Aktualizace proběhla úspěšně",
+        "upd_done_text": "Aplikace je aktualizovaná na verzi {}.",
+        "upd_notes": "Co je nového",
+        "upd_fail_title": "Aktualizace se nedokončila",
+        "upd_fail_text": "Verze {} se nenainstalovala. Používáte verzi {}.",
+        "upd_retry": "Zkusit znovu",
+        "btn_close": "Zavřít",
+        "tip_rsrp": ("RSRP – síla signálu z vysílače. Čím blíž nule, tím lépe.\n"
+                     "Nad −80 dBm výborný · −80 až −90 dobrý · −90 až −100 slabší · "
+                     "pod −100 špatný"),
+        "tip_sinr": ("SINR – poměr signálu k rušení. Rozhoduje hlavně o rychlosti.\n"
+                     "Nad 20 dB výborný · 13 až 20 dobrý · 0 až 13 průměrný · "
+                     "pod 0 rušení"),
+        "tip_rsrq": ("RSRQ – kvalita signálu se zohledněním vytížení buňky. "
+                     "Čím blíž nule, tím lépe.\n"
+                     "Nad −10 dB dobrý · −10 až −15 průměrný · pod −15 slabý\n"
+                     "RSSI – celkový přijímaný výkon včetně rušení"),
         # o aplikaci
         "about_desc": ("Monitor mobilních routerů NETGEAR Nighthawk. Zobrazuje signál, síť, "
                        "roaming, spotřebu dat, baterii a polohu vysílače a měří rychlost "
@@ -425,6 +442,23 @@ STRINGS = {
         "upd_uptodate": "You're on the latest version ({}).",
         "upd_check_failed": "Couldn't check for updates ({}).",
         "upd_toast": "Click to install.",
+        "upd_done_title": "Update installed",
+        "upd_done_text": "The app has been updated to version {}.",
+        "upd_notes": "What's new",
+        "upd_fail_title": "The update didn't finish",
+        "upd_fail_text": "Version {} wasn't installed. You're on version {}.",
+        "upd_retry": "Try again",
+        "btn_close": "Close",
+        "tip_rsrp": ("RSRP – signal strength from the cell tower. Closer to zero is better.\n"
+                     "Above −80 dBm excellent · −80 to −90 good · −90 to −100 weak · "
+                     "below −100 poor"),
+        "tip_sinr": ("SINR – signal-to-interference ratio. It mainly determines speed.\n"
+                     "Above 20 dB excellent · 13 to 20 good · 0 to 13 average · "
+                     "below 0 noisy"),
+        "tip_rsrq": ("RSRQ – signal quality, taking cell load into account. "
+                     "Closer to zero is better.\n"
+                     "Above −10 dB good · −10 to −15 average · below −15 weak\n"
+                     "RSSI – total received power including interference"),
         "about_desc": ("Monitor for NETGEAR Nighthawk mobile routers. Shows signal, network, "
                        "roaming, data usage, battery and tower location, and runs speed tests."),
         "grp_links": "Links",

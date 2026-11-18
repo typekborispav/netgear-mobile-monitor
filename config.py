@@ -33,6 +33,7 @@ DEFAULTS = {
     "billing_day": 0,           # den zúčtování 1–31 (0 = podle routeru)
     "metered_mode": "auto",     # měřené připojení v roamingu: auto | hint | off
     "metered_owned": "",        # SSID, které na měřené přepnula aplikace (vrátí ho)
+    "pending_update": None,     # {"from", "to"} – spuštěný instalátor; po startu se ohlásí výsledek
 }
 
 

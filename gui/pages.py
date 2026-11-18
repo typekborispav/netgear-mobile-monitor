@@ -11,7 +11,7 @@ from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox,
                             PushButton, PushSettingCard, ScrollArea, SettingCard,
                             SettingCardGroup, SimpleCardWidget,
                             StrongBodyLabel, SubtitleLabel, SwitchSettingCard,
-                            TableWidget, TitleLabel)
+                            TableWidget, TitleLabel, ToolTipFilter, ToolTipPosition)
 
 import config
 import device
@@ -98,6 +98,11 @@ class OverviewPage(_Page):
         self.t_rsrp = StatTile(FIF.IOT, "RSRP", self.view)
         self.t_sinr = StatTile(FIF.MIX_VOLUMES, "SINR", self.view)
         self.t_rsrq = StatTile(FIF.ALIGNMENT, "RSRQ", self.view)
+        for tile, key in ((self.t_rsrp, "tip_rsrp"), (self.t_sinr, "tip_sinr"),
+                          (self.t_rsrq, "tip_rsrq")):
+            tile.setToolTip(t(key))                 # vysvětlivka po najetí myší
+            tile.setToolTipDuration(-1)
+            tile.installEventFilter(ToolTipFilter(tile, 300, ToolTipPosition.TOP))
         self.batt_bar = ProgressBar(self.view)
         self.batt_bar.setRange(0, 100)
         self.t_batt = StatTile(battery_glyph(), t("row_batt"), self.view, extra=self.batt_bar)
