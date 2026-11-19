@@ -142,6 +142,7 @@ class Controller:
         self.flyout = None
         self._notified_version = None
         self._wizard_open = False
+        self._router_changed = False
 
         self.poller = Poller()
         self.speed = SpeedTester()
@@ -321,6 +322,12 @@ class Controller:
 
     # ── data ──
     def _on_state(self, snap):
+        changed = bool(snap.get("router_changed"))
+        if changed and not self._router_changed:   # jen jednou, při změně stavu
+            self.toast(t("router_changed_title"), t("hint_router_changed"),
+                       on_click=lambda: self.show_window("settings"),
+                       icon=QSystemTrayIcon.Warning, ms=15000)
+        self._router_changed = changed
         self.tray.setIcon(tray_icon(snap))
         self.tray.setToolTip(c.tooltip_text(snap))
         if self.flyout is not None:

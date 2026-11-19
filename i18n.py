@@ -76,6 +76,9 @@ STRINGS = {
         "no_conn": "Router není dostupný",
         "hint_offline": "Připojte počítač k Wi-Fi routeru.",
         "hint_password": "Chybí heslo k routeru. Zadejte ho v Nastavení.",
+        "hint_router_changed": ("Router nebo SIM karta se změnily, heslo se proto neodeslalo. "
+                                "Potvrďte ho v Nastavení."),
+        "router_changed_title": "Neznámý router",
         "hint_roaming": "Roaming: test rychlosti je vypnutý.",
         "nr_connected": "připojeno",
         "nr_no": "nepřipojeno (NSA {})",
@@ -306,6 +309,9 @@ STRINGS = {
         "no_conn": "Router not reachable",
         "hint_offline": "Connect this PC to the router's Wi-Fi.",
         "hint_password": "Router password missing. Enter it in Settings.",
+        "hint_router_changed": ("The router or SIM card has changed, so the password wasn't sent. "
+                                "Confirm it in Settings."),
+        "router_changed_title": "Unknown router",
         "hint_roaming": "Roaming: the speed test is turned off.",
         "nr_connected": "connected",
         "nr_no": "not connected (NSA {})",

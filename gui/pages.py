@@ -165,8 +165,9 @@ class OverviewPage(_Page):
         self.operator.setText(str(sig.get("operator") or "—"))
         self.net.setText(f"{sig.get('sit', '')} · {sig.get('typ_sluzby', '')} · "
                          f"{t('roaming') if roaming else t('home_net')}")
-        self.hint.setText(t("hint_roaming") if roaming else
-                          t("hint_password") if snap.get("need_password") else "")
+        self.hint.setText(t("hint_router_changed") if snap.get("router_changed") else
+                          t("hint_password") if snap.get("need_password") else
+                          t("hint_roaming") if roaming else "")
 
         rq, rl = c.rsrp_quality(sig.get("rsrp"))
         sq, sl = c.sinr_quality(sig.get("sinr"))
@@ -644,7 +645,8 @@ class SettingsPage(_Page):
         if not ip:
             self.notify.emit("warning", t("set_ip"), t("st_ip_required"))
             return
-        config.save({"router_ip": ip, "password": self.pw.text()})
+        # router_id = "": příští úspěšné přihlášení si zapamatuje nový router
+        config.save({"router_ip": ip, "password": self.pw.text(), "router_id": ""})
         self.routerSaved.emit()
         self.notify.emit("success", t("btn_save_connect"), t("st_saved"))
 

@@ -100,6 +100,7 @@ class SetupWizard(MessageBoxBase):
 
     def _finish(self):
         vals = {k: self.v[k] for k in ("router_ip", "password", "poll_s", "check_updates")}
+        vals["router_id"] = ""            # nový router se zapamatuje při přihlášení
         if self.detect["info"]:
             vals["device_name"] = self.detect["info"].get("name", "")
         config.save(vals)

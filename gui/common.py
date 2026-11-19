@@ -299,7 +299,8 @@ def test_connection(ip, password):
         tok = r.json().get("session", {}).get("secToken")
         if not tok:
             return False, t("tc_no_token")
-        payload = (f"token={tok}&session.password={password}"
+        from netgear import form_value
+        payload = (f"token={tok}&session.password={form_value(password)}"
                    f"&ok_redirect=%2Findex.html&err_redirect=%2Findex.html")
         s.post(f"{base}/Forms/config", data=payload, timeout=12, headers={
             "Content-Type": "application/x-www-form-urlencoded",

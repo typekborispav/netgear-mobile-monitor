@@ -6,7 +6,7 @@ Verzi čte aplikace (O aplikaci, kontrola aktualizací), build skript
 `__version__`, commitnout a pushnout tag `v<verze>`.
 """
 
-__version__ = "2.4.2"
+__version__ = "2.5.0"
 
 APP_NAME = "Netgear Mobile Monitor"
 APP_ID = "NetgearMonitor"                  # název exe, složek, mutexu

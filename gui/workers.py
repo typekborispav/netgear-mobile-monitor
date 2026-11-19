@@ -108,6 +108,7 @@ class Poller(QObject):
         except Exception as e:              # noqa: BLE001 – vlákno nesmí spadnout
             snap.update(ok=False, err=str(e))
         snap["need_password"] = not config.get("password")
+        snap["router_changed"] = n.last_login_error == "unknown_router"
         self.snapshot = snap
         self.updated.emit(snap)
         for kind, level in (fresh_usage or {}).get("new_alerts") or []:  # jen z tohoto čtení

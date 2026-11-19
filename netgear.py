@@ -1,8 +1,11 @@
 import csv
+import hashlib
+import hmac
 import os
 import sys
 import time
 from datetime import datetime
+from urllib.parse import quote
 
 import requests
 
@@ -19,6 +22,9 @@ except Exception:
 # chybí, použijí se výchozí hodnoty z config.DEFAULTS – chování zůstává stejné.
 ROUTER_IP = config.get("router_ip")
 ADMIN_PASSWORD = config.get("password")
+
+# Proč poslední přihlášení selhalo: None | "no_password" | "unknown_router" | "bad_password"
+last_login_error = None
 
 BASE_URL = f"http://{ROUTER_IP}"
 
@@ -67,10 +73,37 @@ def get_model():
     return None
 
 
+def router_fingerprint(data):
+    """Otisk routeru z údajů dostupných BEZ přihlášení: hash ICCID vložené SIM.
+
+    Heslo se pošle jen routeru se stejným otiskem jako při posledním úspěšném
+    přihlášení – na cizí síti s jiným zařízením na 192.168.1.1 se neodešle.
+    Bez SIM (prázdné ICCID) vrací "".
+    """
+    iccid = str(((data or {}).get("sim") or {}).get("iccid") or "").strip()
+    if not iccid:
+        return ""
+    return hashlib.sha256(f"netgear-monitor:{iccid}".encode()).hexdigest()
+
+
+def _router_trusted(data):
+    saved = config.get("router_id") or ""
+    if not saved:
+        return True                         # první přihlášení / po uložení v Nastavení
+    return hmac.compare_digest(router_fingerprint(data), saved)
+
+
+def form_value(text):
+    """Hodnota do urlencoded formuláře (heslo s & + % = # by jinak nefungovalo)."""
+    return quote(str(text), safe="")
+
+
 def login_to_router():
     """Přihlásí se do routeru a uloží secToken do globální session."""
-    global sec_token
+    global sec_token, last_login_error
+    last_login_error = None
     if not ADMIN_PASSWORD:
+        last_login_error = "no_password"
         print("❌ Není nastaveno heslo routeru – doplňte ho v Nastavení (tray) "
               "nebo v config.json.")
         return False
@@ -86,12 +119,18 @@ def login_to_router():
             print("❌ V JSONu nebyl nalezen secToken.")
             return False
 
+        if not _router_trusted(init_data):
+            last_login_error = "unknown_router"
+            print("❌ Router (SIM karta) není ten, ke kterému bylo uložené heslo – "
+                  "heslo se neodeslalo. Potvrďte ho v Nastavení.")
+            return False
+
         # KROK 2: Odeslání přihlašovacího formuláře
         # Posíláme jako surový urlencoded řetězec, který Netgear preferuje.
         print("Posílám přihlašovací údaje (zvýšený timeout)...")
         payload = (
             f"token={sec_token}"
-            f"&session.password={ADMIN_PASSWORD}"
+            f"&session.password={form_value(ADMIN_PASSWORD)}"
             f"&ok_redirect=%2Findex.html"
             f"&err_redirect=%2Findex.html"
         )
@@ -111,9 +150,13 @@ def login_to_router():
         check = get_model()
         role = str(((check or {}).get("session") or {}).get("userRole", "")).lower()
         if role != "admin":
+            last_login_error = "bad_password"
             print(f"❌ Přihlášení selhalo – heslo nesedí (role: {role or '—'}).")
             return False
 
+        fp = router_fingerprint(init_data)
+        if fp and fp != config.get("router_id"):
+            config.save({"router_id": fp})  # zapamatovat „svůj“ router
         print("✅ Přihlášení proběhlo.\n")
         return True
 

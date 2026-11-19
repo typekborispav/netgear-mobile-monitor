@@ -1,4 +1,4 @@
 # Sestavení instalátoru (build.ps1 / GitHub Actions)
 -r requirements.txt
 pyinstaller==6.19.0
-pillow>=10.1            # jen pro vygenerování icon.ico při buildu
+pillow==13.0.0          # jen pro vygenerování icon.ico při buildu

@@ -34,7 +34,8 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
   (zelená, žlutá, červená). Odznak „R“ znamená roaming, červený křížek výpadek
   spojení.
 - **Automatické aktualizace z GitHubu.** Aplikace nabídne novou verzi, stáhne ji,
-  ověří kontrolní součet SHA-256 a nainstaluje se. Stačí potvrdit oprávnění správce.
+  ověří digitální podpis autora a nainstaluje se. Stačí potvrdit oprávnění správce.
+  Instalátor bez platného podpisu odmítne.
 - Čeština a angličtina, spouštění po přihlášení do Windows.
 
 ## Instalace
@@ -50,8 +51,10 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
 3. Připojte počítač k Wi-Fi routeru. Průvodce najde router a zeptá se na heslo do
    administrace (bývá na štítku zařízení).
 
-Nastavení se ukládá do `%APPDATA%\NetgearMonitor\config.json`. **Heslo je tam
-uložené jako prostý text**, nikam se neodesílá.
+Nastavení se ukládá do `%APPDATA%\NetgearMonitor\config.json`. Heslo je tam
+zašifrované (Windows DPAPI, přečíst ho jde jen pod vaším účtem). Aplikace ho
+posílá jen routeru, ke kterému se poprvé úspěšně přihlásila (pozná ho podle
+SIM karty). Na cizí síti s jiným zařízením na stejné adrese se heslo neodešle.
 
 Odinstalace: *Nastavení Windows → Aplikace → Netgear Mobile Monitor*.
 
@@ -71,9 +74,11 @@ winget install JRSoftware.InnoSetup
 powershell -ExecutionPolicy Bypass -File build.ps1   # → dist\NetgearMonitor-Setup-<verze>.exe
 ```
 
-**Vydání nové verze:** zvyšte `__version__` ve `version.py`, commitněte a pushněte
-tag `v<verze>`. GitHub Actions (`.github/workflows/release.yml`) sestaví instalátor
-a vytvoří Release. Nainstalované aplikace si ho samy najdou.
+**Vydání nové verze:** zvyšte `__version__` ve `version.py`, commitněte a spusťte
+`pwsh tools\release.ps1 -Version <verze>`. Skript instalátor sestaví lokálně,
+podepíše ho klíčem autora (`tools\release-key.ps1`) a vytvoří Release.
+Nainstalované aplikace přijmou jen takto podepsaný instalátor. GitHub Actions
+dělá jen kontrolní sestavení.
 
 Kromě aplikace obsahuje repozitář i skripty pro příkazovou řádku, fungují
 i na Linuxu/Raspberry Pi: `dashboard.py` (živý přehled v terminálu), `netgear.py log`

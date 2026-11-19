@@ -5,10 +5,12 @@
 # Kroky: 1) ikona + version info (packaging\make_assets.py)
 #        2) PyInstaller --onedir  -> dist\NetgearMonitor\NetgearMonitor.exe
 #        3) Inno Setup            -> dist\NetgearMonitor-Setup-<verze>.exe
-#        4) SHA-256 kontrolní součet (ověřuje ho updater v aplikaci)
+#        4) SHA-256 kontrolní součet (pro ruční kontrolu; aplikace ověřuje podpis .sig,
+#           který vytváří tools\release.ps1)
 #
 # Vyžaduje: Python + pip install -r requirements-build.txt, Inno Setup 6.5+
-# (winget install JRSoftware.InnoSetup). Stejný skript používá GitHub Actions.
+# (winget install JRSoftware.InnoSetup). Volá ho tools\release.ps1 i kontrolní
+# sestavení na GitHub Actions.
 
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
