@@ -3,16 +3,21 @@
 Aplikace pro Windows 11, která hlídá mobilní 5G/LTE router **Netgear Nighthawk**
 (M1, M2, M3, M5, M6, M6 Pro, M7…). Sedí v oznamovací oblasti vedle hodin. Kliknutím
 na ikonu otevřete průhledný panel s přehledem, z něj pak celé okno ve stylu
-Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
+Nastavení Windows 11 (Fluent Design, Mica, světlý i tmavý motiv, pevný boční panel).
 
 **[⬇ Stáhnout instalátor (poslední verze)](https://github.com/typekborispav/netgear-mobile-monitor/releases/latest)**
+
+![Přehled v hlavním okně](docs/overview.png)
 
 ## Co umí
 
 - **Automatická detekce routeru.** Při prvním spuštění najde router v síti
   (výchozí brána a obvyklé adresy) a pozná model, například „Nighthawk M3 · MH3150“.
 - **Signál a síť:** RSRP, SINR, RSRQ, 4G/5G (NSA), agregace nosných, buňka a pásmo,
-  roaming. K tomu graf historie signálu.
+  roaming. K tomu graf historie signálu. Po najetí myší na RSRP, SINR a RSRQ
+  se zobrazí vysvětlivka s rozsahy hodnot.
+- **Podrobnosti** ve vlastní záložce: zařízení (model, firmware, baterie, teplota,
+  doba provozu), mobilní síť (operátor, pásma, 5G) a buňka s vysílačem.
 - **Poloha vysílače (BTS)** v sítích T-Mobile, O2 a Vodafone CZ. Data o poloze
   pocházejí z databáze [gsmweb.cz](https://gsmweb.cz/), používáme je se svolením
   provozovatele.
@@ -35,7 +40,8 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
   spojení.
 - **Automatické aktualizace z GitHubu.** Aplikace nabídne novou verzi, stáhne ji,
   ověří digitální podpis autora a nainstaluje se. Stačí potvrdit oprávnění správce.
-  Instalátor bez platného podpisu odmítne.
+  Instalátor bez platného podpisu odmítne. Po aktualizaci ohlásí, jestli proběhla
+  úspěšně.
 - Čeština a angličtina, spouštění po přihlášení do Windows.
 
 ## Instalace
@@ -45,18 +51,30 @@ Windows 11 (Fluent Design, Mica, světlý i tmavý motiv).
 2. Spusťte ho a potvrďte oprávnění správce. Aplikace se nainstaluje do
    `C:\Program Files\Netgear Mobile Monitor`. Běží ale pod vaším běžným účtem
    bez práv správce.
-   - Instalátor zatím není digitálně podepsaný, takže Windows SmartScreen může
-     zobrazit „Systém Windows ochránil váš počítač“. Klikněte na **Další
-     informace → Přesto spustit**.
+   - Instalátor nemá placený certifikát Microsoftu (Authenticode), takže Windows
+     SmartScreen může zobrazit „Systém Windows ochránil váš počítač“. Klikněte na
+     **Další informace → Přesto spustit**. Pravost stažené verze ověříte podle
+     souboru `.sha256` u vydání; aktualizace uvnitř aplikace ověřuje podpis sama.
 3. Připojte počítač k Wi-Fi routeru. Průvodce najde router a zeptá se na heslo do
    administrace (bývá na štítku zařízení).
 
-Nastavení se ukládá do `%APPDATA%\NetgearMonitor\config.json`. Heslo je tam
-zašifrované (Windows DPAPI, přečíst ho jde jen pod vaším účtem). Aplikace ho
-posílá jen routeru, ke kterému se poprvé úspěšně přihlásila (pozná ho podle
-SIM karty). Na cizí síti s jiným zařízením na stejné adrese se heslo neodešle.
-
 Odinstalace: *Nastavení Windows → Aplikace → Netgear Mobile Monitor*.
+
+## Bezpečnost a soukromí
+
+- **Heslo k routeru** je v `%APPDATA%\NetgearMonitor\config.json` zašifrované
+  (Windows DPAPI, přečíst ho jde jen pod vaším účtem Windows).
+- **Heslo dostane jen váš router.** Aplikace si ho při prvním přihlášení zapamatuje
+  podle SIM karty. Když na stejné adrese odpoví jiné zařízení (třeba na cizí
+  Wi-Fi), heslo se neodešle. Po výměně SIM nebo routeru ho stačí potvrdit
+  v Nastavení.
+- **Aktualizace jsou podepsané** klíčem, který má jen autor na svém počítači.
+  Ani případné převzetí GitHub účtu nedovolí podstrčit falešnou verzi.
+- **Žádná telemetrie.** Aplikace komunikuje jen s routerem, s GitHubem (kontrola
+  aktualizací, lze vypnout), s gsmweb.cz (databáze vysílačů, max. 1× týdně)
+  a při ručním testu rychlosti s Cloudflare.
+- Omezení routeru: administrace Nighthawk běží jen přes nešifrované HTTP, heslo
+  při přihlášení tedy chrání jen šifrování Wi-Fi (WPA2/WPA3).
 
 ## Pro vývojáře
 
@@ -96,16 +114,21 @@ které jsou dostupné i bez přihlášení. Odesílání SMS firmware novější
 ## English
 
 Windows 11 tray app for **Netgear Nighthawk mobile routers** (M1/M2/M3/M5/M6/M7…).
-It auto-detects the router model, shows signal, network, roaming, battery,
-temperature and cell tower location (Czech networks), runs an on-demand speed test
-and updates itself from GitHub Releases. Download the installer from
+It auto-detects the router model, shows signal (with explanations of RSRP, SINR
+and RSRQ), network, roaming, data usage per billing period (home and roaming),
+battery, temperature and cell tower location (Czech networks). It switches Wi-Fi
+to a metered connection while roaming, runs an on-demand speed test and updates
+itself from GitHub Releases with signature verification. The router password is
+stored encrypted (DPAPI) and sent only to the router it was first used with.
+Czech and English UI. Download the installer from
 [Releases](https://github.com/typekborispav/netgear-mobile-monitor/releases/latest).
 
 ## Licence
 
 [GNU GPL v3](LICENSE). Uživatelské rozhraní používá
 [PySide6-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets) (GPLv3).
-Neoficiální projekt bez vazby na společnost NETGEAR. Data o poloze vysílačů
+Neoficiální projekt bez vazby na společnost NETGEAR. NETGEAR a Nighthawk jsou
+ochranné známky NETGEAR, Inc. Data o poloze vysílačů
 pocházejí z databáze [gsmweb.cz](https://gsmweb.cz/) a aplikace je používá se
 svolením jejího provozovatele. Děkujeme! GSMweb je nekomerční projekt, pokud vám
 lokalizace vysílačů pomáhá, zvažte podporu jeho provozu (kontakt na webu
